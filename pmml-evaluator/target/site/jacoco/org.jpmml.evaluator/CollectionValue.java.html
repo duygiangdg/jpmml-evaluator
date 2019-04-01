@@ -1,0 +1,123 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>CollectionValue.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">JPMML evaluator</a> &gt; <a href="index.source.html" class="el_package">org.jpmml.evaluator</a> &gt; <span class="el_source">CollectionValue.java</span></div><h1>CollectionValue.java</h1><pre class="source lang-java linenums">/*
+ * Copyright (c) 2019 Villu Ruusmann
+ *
+ * This file is part of JPMML-Evaluator
+ *
+ * JPMML-Evaluator is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Affero General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * JPMML-Evaluator is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Affero General Public License for more details.
+ *
+ * You should have received a copy of the GNU Affero General Public License
+ * along with JPMML-Evaluator.  If not, see &lt;http://www.gnu.org/licenses/&gt;.
+ */
+package org.jpmml.evaluator;
+
+import java.util.Collection;
+import java.util.List;
+import java.util.Objects;
+
+import org.dmg.pmml.DataType;
+import org.dmg.pmml.OpType;
+import org.jpmml.model.ToStringHelper;
+
+public class CollectionValue extends FieldValue {
+
+<span class="fc" id="L31">	private OpType opType = null;</span>
+
+<span class="fc" id="L33">	private List&lt;?&gt; ordering = null;</span>
+
+
+	CollectionValue(DataType dataType, OpType opType, Collection&lt;?&gt; value){
+<span class="fc" id="L37">		this(dataType, opType, null, value);</span>
+<span class="fc" id="L38">	}</span>
+
+	CollectionValue(DataType dataType, OpType opType, List&lt;?&gt; ordering, Collection&lt;?&gt; value){
+<span class="fc" id="L41">		super(dataType, value);</span>
+
+<span class="fc" id="L43">		setOpType(Objects.requireNonNull(opType));</span>
+
+<span class="pc bpc" id="L45" title="1 of 3 branches missed.">		switch(opType){</span>
+			case CONTINUOUS:
+			case CATEGORICAL:
+<span class="pc bpc" id="L48" title="1 of 2 branches missed.">				if(ordering != null){</span>
+<span class="nc" id="L49">					throw new IllegalArgumentException();</span>
+				}
+				break;
+			case ORDINAL:
+<span class="fc" id="L53">				setOrdering(ordering);</span>
+<span class="fc" id="L54">				break;</span>
+			default:
+<span class="nc" id="L56">				throw new IllegalArgumentException();</span>
+		}
+<span class="fc" id="L58">	}</span>
+
+	@Override
+	public int compareToValue(Object value){
+<span class="nc" id="L62">		throw new EvaluationException(&quot;Collection value cannot be used in comparison operations&quot;);</span>
+	}
+
+	@Override
+	public int compareToValue(FieldValue value){
+<span class="nc" id="L67">		throw new EvaluationException(&quot;Collection value cannot be used in comparison operations&quot;);</span>
+	}
+
+	@Override
+	public int hashCode(){
+<span class="nc" id="L72">		List&lt;?&gt; ordering = getOrdering();</span>
+<span class="nc bnc" id="L73" title="All 2 branches missed.">		if(ordering == null){</span>
+<span class="nc" id="L74">			return super.hashCode();</span>
+		}
+
+<span class="nc" id="L77">		return (31 * super.hashCode()) + ordering.hashCode();</span>
+	}
+
+	@Override
+	public boolean equals(Object object){
+
+<span class="nc bnc" id="L83" title="All 2 branches missed.">		if(object instanceof CollectionValue){</span>
+<span class="nc" id="L84">			CollectionValue that = (CollectionValue)object;</span>
+
+<span class="nc bnc" id="L86" title="All 4 branches missed.">			return super.equals(object) &amp;&amp; Objects.equals(this.getOrdering(), that.getOrdering());</span>
+		}
+
+<span class="nc" id="L89">		return false;</span>
+	}
+
+	@Override
+	protected ToStringHelper toStringHelper(){
+<span class="nc" id="L94">		ToStringHelper helper = super.toStringHelper()</span>
+<span class="nc" id="L95">			.add(&quot;ordering&quot;, getOrdering());</span>
+
+<span class="nc" id="L97">		return helper;</span>
+	}
+
+	@Override
+	public OpType getOpType(){
+<span class="fc" id="L102">		return this.opType;</span>
+	}
+
+	private void setOpType(OpType opType){
+<span class="fc" id="L106">		this.opType = opType;</span>
+<span class="fc" id="L107">	}</span>
+
+	@Override
+	public List&lt;?&gt; getOrdering(){
+<span class="fc" id="L111">		return this.ordering;</span>
+	}
+
+	private void setOrdering(List&lt;?&gt; ordering){
+<span class="fc" id="L115">		this.ordering = ordering;</span>
+<span class="fc" id="L116">	}</span>
+
+	@Override
+	public Collection&lt;?&gt; getValue(){
+<span class="fc" id="L120">		return (Collection&lt;?&gt;)super.getValue();</span>
+	}
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.2.201808211720</span></div></body></html>

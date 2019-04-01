@@ -1,0 +1,102 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>ConfigurationBuilder.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">JPMML evaluator</a> &gt; <a href="index.source.html" class="el_package">org.jpmml.evaluator</a> &gt; <span class="el_source">ConfigurationBuilder.java</span></div><h1>ConfigurationBuilder.java</h1><pre class="source lang-java linenums">/*
+ * Copyright (c) 2018 Villu Ruusmann
+ *
+ * This file is part of JPMML-Evaluator
+ *
+ * JPMML-Evaluator is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Affero General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * JPMML-Evaluator is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Affero General Public License for more details.
+ *
+ * You should have received a copy of the GNU Affero General Public License
+ * along with JPMML-Evaluator.  If not, see &lt;http://www.gnu.org/licenses/&gt;.
+ */
+package org.jpmml.evaluator;
+
+import java.io.Serializable;
+
+public class ConfigurationBuilder implements Cloneable, Serializable {
+
+<span class="fc" id="L25">	private ModelEvaluatorFactory modelEvaluatorFactory = null;</span>
+
+<span class="fc" id="L27">	private ValueFactoryFactory valueFactoryFactory = null;</span>
+
+<span class="fc" id="L29">	private OutputFilter outputFilter = null;</span>
+
+
+<span class="fc" id="L32">	public ConfigurationBuilder(){</span>
+<span class="fc" id="L33">	}</span>
+
+	@Override
+	public ConfigurationBuilder clone(){
+
+		try {
+<span class="fc" id="L39">			return (ConfigurationBuilder)super.clone();</span>
+<span class="nc" id="L40">		} catch(CloneNotSupportedException cnse){</span>
+<span class="nc" id="L41">			throw new InternalError(cnse);</span>
+		}
+	}
+
+	public Configuration build(){
+<span class="fc" id="L46">		Configuration configuration = new Configuration();</span>
+
+<span class="fc" id="L48">		ModelEvaluatorFactory modelEvaluatorFactory = getModelEvaluatorFactory();</span>
+<span class="fc bfc" id="L49" title="All 2 branches covered.">		if(modelEvaluatorFactory == null){</span>
+<span class="fc" id="L50">			modelEvaluatorFactory = ModelEvaluatorFactory.newInstance();</span>
+		}
+
+<span class="fc" id="L53">		configuration.setModelEvaluatorFactory(modelEvaluatorFactory);</span>
+
+<span class="fc" id="L55">		ValueFactoryFactory valueFactoryFactory = getValueFactoryFactory();</span>
+<span class="fc bfc" id="L56" title="All 2 branches covered.">		if(valueFactoryFactory == null){</span>
+<span class="fc" id="L57">			valueFactoryFactory = ValueFactoryFactory.newInstance();</span>
+		}
+
+<span class="fc" id="L60">		configuration.setValueFactoryFactory(valueFactoryFactory);</span>
+
+<span class="fc" id="L62">		OutputFilter outputFilter = getOutputFilter();</span>
+<span class="fc bfc" id="L63" title="All 2 branches covered.">		if(outputFilter == null){</span>
+<span class="fc" id="L64">			outputFilter = OutputFilters.KEEP_ALL;</span>
+		}
+
+<span class="fc" id="L67">		configuration.setOutputFilter(outputFilter);</span>
+
+<span class="fc" id="L69">		return configuration;</span>
+	}
+
+	public ModelEvaluatorFactory getModelEvaluatorFactory(){
+<span class="fc" id="L73">		return this.modelEvaluatorFactory;</span>
+	}
+
+	public ConfigurationBuilder setModelEvaluatorFactory(ModelEvaluatorFactory modelEvaluatorFactory){
+<span class="fc" id="L77">		this.modelEvaluatorFactory = modelEvaluatorFactory;</span>
+
+<span class="fc" id="L79">		return this;</span>
+	}
+
+	public ValueFactoryFactory getValueFactoryFactory(){
+<span class="fc" id="L83">		return this.valueFactoryFactory;</span>
+	}
+
+	public ConfigurationBuilder setValueFactoryFactory(ValueFactoryFactory valueFactoryFactory){
+<span class="fc" id="L87">		this.valueFactoryFactory = valueFactoryFactory;</span>
+
+<span class="fc" id="L89">		return this;</span>
+	}
+
+	public OutputFilter getOutputFilter(){
+<span class="fc" id="L93">		return this.outputFilter;</span>
+	}
+
+	public ConfigurationBuilder setOutputFilter(OutputFilter outputFilter){
+<span class="fc" id="L97">		this.outputFilter = outputFilter;</span>
+
+<span class="fc" id="L99">		return this;</span>
+	}
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.2.201808211720</span></div></body></html>

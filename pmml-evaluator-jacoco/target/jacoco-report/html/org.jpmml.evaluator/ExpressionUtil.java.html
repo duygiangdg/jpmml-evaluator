@@ -1,0 +1,478 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>ExpressionUtil.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">PMML class model evaluator code coverage</a> &gt; <a href="index.source.html" class="el_package">org.jpmml.evaluator</a> &gt; <span class="el_source">ExpressionUtil.java</span></div><h1>ExpressionUtil.java</h1><pre class="source lang-java linenums">/*
+ * Copyright (c) 2013 Villu Ruusmann
+ *
+ * This file is part of JPMML-Evaluator
+ *
+ * JPMML-Evaluator is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Affero General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * JPMML-Evaluator is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Affero General Public License for more details.
+ *
+ * You should have received a copy of the GNU Affero General Public License
+ * along with JPMML-Evaluator.  If not, see &lt;http://www.gnu.org/licenses/&gt;.
+ */
+package org.jpmml.evaluator;
+
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.Iterator;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.stream.Collectors;
+
+import org.dmg.pmml.Aggregate;
+import org.dmg.pmml.Apply;
+import org.dmg.pmml.Constant;
+import org.dmg.pmml.DataType;
+import org.dmg.pmml.Discretize;
+import org.dmg.pmml.Expression;
+import org.dmg.pmml.FieldColumnPair;
+import org.dmg.pmml.FieldName;
+import org.dmg.pmml.FieldRef;
+import org.dmg.pmml.HasDataType;
+import org.dmg.pmml.HasExpression;
+import org.dmg.pmml.HasFieldReference;
+import org.dmg.pmml.HasType;
+import org.dmg.pmml.InvalidValueTreatmentMethod;
+import org.dmg.pmml.MapValues;
+import org.dmg.pmml.NormContinuous;
+import org.dmg.pmml.NormDiscrete;
+import org.dmg.pmml.OpType;
+import org.dmg.pmml.PMMLObject;
+import org.dmg.pmml.TextIndex;
+
+public class ExpressionUtil {
+
+	private ExpressionUtil(){
+	}
+
+	static
+	public &lt;E extends Expression &amp; HasFieldReference&lt;E&gt;&gt; FieldName ensureField(E hasField){
+<span class="fc" id="L59">		FieldName name = hasField.getField();</span>
+<span class="pc bpc" id="L60" title="1 of 2 branches missed.">		if(name == null){</span>
+<span class="nc" id="L61">			throw new MissingAttributeException(MissingAttributeException.formatMessage(XPathUtil.formatElement(hasField.getClass()) + &quot;@field&quot;), hasField);</span>
+		}
+
+<span class="fc" id="L64">		return name;</span>
+	}
+
+	static
+	public &lt;E extends PMMLObject &amp; HasExpression&lt;E&gt;&gt; Expression ensureExpression(E hasExpression){
+<span class="fc" id="L69">		Expression expression = hasExpression.getExpression();</span>
+<span class="pc bpc" id="L70" title="1 of 2 branches missed.">		if(expression == null){</span>
+<span class="nc" id="L71">			throw new MissingElementException(MissingElementException.formatMessage(XPathUtil.formatElement(hasExpression.getClass()) + &quot;/&lt;Expression&gt;&quot;), hasExpression);</span>
+		}
+
+<span class="fc" id="L74">		return expression;</span>
+	}
+
+	static
+	public &lt;E extends PMMLObject &amp; HasType&lt;E&gt; &amp; HasExpression&lt;E&gt;&gt; FieldValue evaluateTypedExpressionContainer(E hasTypedExpression, EvaluationContext context){
+<span class="fc" id="L79">		FieldValue value = evaluateExpressionContainer(hasTypedExpression, context);</span>
+
+<span class="fc bfc" id="L81" title="All 2 branches covered.">		if(FieldValueUtil.isMissing(value)){</span>
+<span class="fc" id="L82">			return FieldValues.MISSING_VALUE;</span>
+		}
+
+<span class="fc" id="L85">		return value.cast(hasTypedExpression);</span>
+	}
+
+	static
+	public &lt;E extends PMMLObject &amp; HasExpression&lt;E&gt;&gt; FieldValue evaluateExpressionContainer(E hasExpression, EvaluationContext context){
+<span class="fc" id="L90">		return evaluate(ensureExpression(hasExpression), context);</span>
+	}
+
+	static
+	public FieldValue evaluate(Expression expression, EvaluationContext context){
+
+		try {
+<span class="fc" id="L97">			return evaluateExpression(expression, context);</span>
+<span class="fc" id="L98">		} catch(PMMLException pe){</span>
+<span class="fc" id="L99">			throw pe.ensureContext(expression);</span>
+		}
+	}
+
+	static
+	FieldValue evaluateExpression(Expression expression, EvaluationContext context){
+
+<span class="fc bfc" id="L106" title="All 2 branches covered.">		if(expression instanceof Constant){</span>
+<span class="fc" id="L107">			return evaluateConstant((Constant)expression);</span>
+		} else
+
+<span class="fc bfc" id="L110" title="All 2 branches covered.">		if(expression instanceof FieldRef){</span>
+<span class="fc" id="L111">			return evaluateFieldRef((FieldRef)expression, context);</span>
+		} else
+
+<span class="fc bfc" id="L114" title="All 2 branches covered.">		if(expression instanceof NormContinuous){</span>
+<span class="fc" id="L115">			return evaluateNormContinuous((NormContinuous)expression, context);</span>
+		} else
+
+<span class="fc bfc" id="L118" title="All 2 branches covered.">		if(expression instanceof NormDiscrete){</span>
+<span class="fc" id="L119">			return evaluateNormDiscrete((NormDiscrete)expression, context);</span>
+		} else
+
+<span class="fc bfc" id="L122" title="All 2 branches covered.">		if(expression instanceof Discretize){</span>
+<span class="fc" id="L123">			return evaluateDiscretize((Discretize)expression, context);</span>
+		} else
+
+<span class="fc bfc" id="L126" title="All 2 branches covered.">		if(expression instanceof MapValues){</span>
+<span class="fc" id="L127">			return evaluateMapValues((MapValues)expression, context);</span>
+		} else
+
+<span class="fc bfc" id="L130" title="All 2 branches covered.">		if(expression instanceof TextIndex){</span>
+<span class="fc" id="L131">			return evaluateTextIndex((TextIndex)expression, context);</span>
+		} else
+
+<span class="fc bfc" id="L134" title="All 2 branches covered.">		if(expression instanceof Apply){</span>
+<span class="fc" id="L135">			return evaluateApply((Apply)expression, context);</span>
+		} else
+
+<span class="pc bpc" id="L138" title="1 of 2 branches missed.">		if(expression instanceof Aggregate){</span>
+<span class="fc" id="L139">			return evaluateAggregate((Aggregate)expression, context);</span>
+		} // End if
+
+<span class="nc bnc" id="L142" title="All 2 branches missed.">		if(expression instanceof JavaExpression){</span>
+<span class="nc" id="L143">			return evaluateJavaExpression((JavaExpression)expression, context);</span>
+		}
+
+<span class="nc" id="L146">		throw new UnsupportedElementException(expression);</span>
+	}
+
+	static
+	public FieldValue evaluateConstant(Constant constant){
+<span class="fc" id="L151">		DataType dataType = getConstantDataType(constant);</span>
+<span class="fc" id="L152">		OpType opType = TypeUtil.getOpType(dataType);</span>
+
+<span class="fc" id="L154">		return FieldValueUtil.create(dataType, opType, constant.getValue());</span>
+	}
+
+	static
+	public FieldValue evaluateFieldRef(FieldRef fieldRef, EvaluationContext context){
+<span class="fc" id="L159">		FieldValue value = context.evaluate(ensureField(fieldRef));</span>
+
+<span class="fc bfc" id="L161" title="All 2 branches covered.">		if(FieldValueUtil.isMissing(value)){</span>
+<span class="fc" id="L162">			return FieldValueUtil.create(TypeInfos.CATEGORICAL_STRING, fieldRef.getMapMissingTo());</span>
+		}
+
+<span class="fc" id="L165">		return value;</span>
+	}
+
+	static
+	public FieldValue evaluateNormContinuous(NormContinuous normContinuous, EvaluationContext context){
+<span class="fc" id="L170">		FieldValue value = context.evaluate(ensureField(normContinuous));</span>
+
+<span class="fc bfc" id="L172" title="All 2 branches covered.">		if(FieldValueUtil.isMissing(value)){</span>
+<span class="fc" id="L173">			return FieldValueUtil.create(TypeInfos.CONTINUOUS_DOUBLE, normContinuous.getMapMissingTo());</span>
+		}
+
+<span class="fc" id="L176">		return NormalizationUtil.normalize(normContinuous, value);</span>
+	}
+
+	static
+	public FieldValue evaluateNormDiscrete(NormDiscrete normDiscrete, EvaluationContext context){
+<span class="fc" id="L181">		FieldValue value = context.evaluate(ensureField(normDiscrete));</span>
+
+<span class="fc bfc" id="L183" title="All 2 branches covered.">		if(FieldValueUtil.isMissing(value)){</span>
+<span class="fc" id="L184">			return FieldValueUtil.create(TypeInfos.CATEGORICAL_DOUBLE, normDiscrete.getMapMissingTo());</span>
+		}
+
+<span class="fc" id="L187">		NormDiscrete.Method method = normDiscrete.getMethod();</span>
+<span class="pc bpc" id="L188" title="1 of 2 branches missed.">		switch(method){</span>
+			case INDICATOR:
+				{
+<span class="fc" id="L191">					boolean equals = value.equals(normDiscrete);</span>
+
+<span class="fc bfc" id="L193" title="All 2 branches covered.">					return (equals ? FieldValues.CATEGORICAL_DOUBLE_ONE : FieldValues.CATEGORICAL_DOUBLE_ZERO);</span>
+				}
+			default:
+<span class="nc" id="L196">				throw new UnsupportedAttributeException(normDiscrete, method);</span>
+		}
+	}
+
+	static
+	public FieldValue evaluateDiscretize(Discretize discretize, EvaluationContext context){
+<span class="fc" id="L202">		FieldValue value = context.evaluate(ensureField(discretize));</span>
+
+<span class="fc bfc" id="L204" title="All 2 branches covered.">		if(FieldValueUtil.isMissing(value)){</span>
+<span class="fc" id="L205">			return FieldValueUtil.create(getDataType(discretize, DataType.STRING), OpType.CATEGORICAL, discretize.getMapMissingTo());</span>
+		}
+
+<span class="fc" id="L208">		return DiscretizationUtil.discretize(discretize, value);</span>
+	}
+
+	static
+	public FieldValue evaluateMapValues(MapValues mapValues, EvaluationContext context){
+<span class="fc" id="L213">		Map&lt;String, FieldValue&gt; values = new LinkedHashMap&lt;&gt;();</span>
+
+<span class="fc" id="L215">		List&lt;FieldColumnPair&gt; fieldColumnPairs = mapValues.getFieldColumnPairs();</span>
+<span class="fc bfc" id="L216" title="All 2 branches covered.">		for(FieldColumnPair fieldColumnPair : fieldColumnPairs){</span>
+<span class="fc" id="L217">			FieldName name = fieldColumnPair.getField();</span>
+<span class="pc bpc" id="L218" title="1 of 2 branches missed.">			if(name == null){</span>
+<span class="nc" id="L219">				throw new MissingAttributeException(fieldColumnPair, PMMLAttributes.FIELDCOLUMNPAIR_FIELD);</span>
+			}
+
+<span class="fc" id="L222">			String column = fieldColumnPair.getColumn();</span>
+<span class="pc bpc" id="L223" title="1 of 2 branches missed.">			if(column == null){</span>
+<span class="nc" id="L224">				throw new MissingAttributeException(fieldColumnPair, PMMLAttributes.FIELDCOLUMNPAIR_COLUMN);</span>
+			}
+
+<span class="fc" id="L227">			FieldValue value = context.evaluate(name);</span>
+<span class="fc bfc" id="L228" title="All 2 branches covered.">			if(FieldValueUtil.isMissing(value)){</span>
+<span class="fc" id="L229">				return FieldValueUtil.create(getDataType(mapValues, DataType.STRING), OpType.CATEGORICAL, mapValues.getMapMissingTo());</span>
+			}
+
+<span class="fc" id="L232">			values.put(column, value);</span>
+<span class="fc" id="L233">		}</span>
+
+<span class="fc" id="L235">		return DiscretizationUtil.mapValue(mapValues, values);</span>
+	}
+
+	static
+	public FieldValue evaluateTextIndex(TextIndex textIndex, EvaluationContext context){
+<span class="fc" id="L240">		FieldName textName = textIndex.getTextField();</span>
+<span class="pc bpc" id="L241" title="1 of 2 branches missed.">		if(textName == null){</span>
+<span class="nc" id="L242">			throw new MissingAttributeException(textIndex, PMMLAttributes.TEXTINDEX_TEXTFIELD);</span>
+		}
+
+<span class="fc" id="L245">		FieldValue textValue = context.evaluate(textName);</span>
+
+<span class="fc" id="L247">		FieldValue termValue = ExpressionUtil.evaluateExpressionContainer(textIndex, context);</span>
+
+		// See http://mantis.dmg.org/view.php?id=171
+<span class="pc bpc" id="L250" title="1 of 4 branches missed.">		if(FieldValueUtil.isMissing(textValue) || FieldValueUtil.isMissing(termValue)){</span>
+<span class="fc" id="L251">			return FieldValues.MISSING_VALUE;</span>
+		}
+
+<span class="fc" id="L254">		TextUtil.TextProcessor textProcessor = new TextUtil.TextProcessor(textIndex, textValue);</span>
+
+<span class="fc" id="L256">		List&lt;String&gt; textTokens = textProcessor.process();</span>
+
+<span class="fc" id="L258">		TextUtil.TermProcessor termProcessor = new TextUtil.TermProcessor(textIndex, termValue);</span>
+
+<span class="fc" id="L260">		List&lt;String&gt; termTokens = termProcessor.process();</span>
+
+<span class="fc" id="L262">		int termFrequency = TextUtil.termFrequency(textIndex, textTokens, termTokens);</span>
+
+<span class="fc" id="L264">		TextIndex.LocalTermWeights localTermWeights = textIndex.getLocalTermWeights();</span>
+<span class="pc bpc" id="L265" title="2 of 3 branches missed.">		switch(localTermWeights){</span>
+			case BINARY:
+			case TERM_FREQUENCY:
+<span class="fc" id="L268">				return FieldValueUtil.create(TypeInfos.CONTINUOUS_INTEGER, termFrequency);</span>
+			case LOGARITHMIC:
+<span class="nc" id="L270">				return FieldValueUtil.create(TypeInfos.CONTINUOUS_DOUBLE, Math.log10(1d + termFrequency));</span>
+			default:
+<span class="nc" id="L272">				throw new UnsupportedAttributeException(textIndex, localTermWeights);</span>
+		}
+	}
+
+	static
+	public FieldValue evaluateApply(Apply apply, EvaluationContext context){
+<span class="fc" id="L278">		String mapMissingTo = apply.getMapMissingTo();</span>
+
+<span class="fc" id="L280">		List&lt;Expression&gt; expressions = apply.getExpressions();</span>
+
+<span class="fc" id="L282">		List&lt;FieldValue&gt; values = new ArrayList&lt;&gt;(expressions.size());</span>
+
+<span class="fc" id="L284">		Iterator&lt;Expression&gt; arguments = expressions.iterator();</span>
+
+<span class="fc" id="L286">		String function = apply.getFunction();</span>
+
+		condition:
+<span class="fc bfc" id="L289" title="All 2 branches covered.">		if((&quot;if&quot;).equals(function)){</span>
+
+<span class="pc bpc" id="L291" title="1 of 2 branches missed.">			if(arguments.hasNext()){</span>
+<span class="fc" id="L292">				FieldValue flag = evaluate(arguments.next(), context);</span>
+
+<span class="pc bpc" id="L294" title="3 of 4 branches missed.">				if(flag == null &amp;&amp; mapMissingTo != null){</span>
+<span class="nc" id="L295">					return FieldValueUtil.create(TypeInfos.CATEGORICAL_STRING, mapMissingTo);</span>
+				}
+
+<span class="fc" id="L298">				values.add(flag);</span>
+
+				// Skip both THEN and ELSE parts
+<span class="pc bpc" id="L301" title="1 of 2 branches missed.">				if(flag == null){</span>
+
+<span class="nc bnc" id="L303" title="All 2 branches missed.">					if(arguments.hasNext()){</span>
+<span class="nc" id="L304">						arguments.next();</span>
+
+<span class="nc" id="L306">						values.add(FieldValues.MISSING_VALUE);</span>
+
+<span class="nc bnc" id="L308" title="All 2 branches missed.">						if(arguments.hasNext()){</span>
+<span class="nc" id="L309">							arguments.next();</span>
+
+<span class="nc" id="L311">							values.add(FieldValues.MISSING_VALUE);</span>
+						}
+					}
+
+					break condition;
+				} // End if
+
+				// Evaluate THEN part, skip ELSE part
+<span class="fc bfc" id="L319" title="All 2 branches covered.">				if(flag.asBoolean()){</span>
+
+<span class="pc bpc" id="L321" title="1 of 2 branches missed.">					if(arguments.hasNext()){</span>
+<span class="fc" id="L322">						FieldValue trueValue = evaluate(arguments.next(), context);</span>
+
+<span class="pc bpc" id="L324" title="3 of 4 branches missed.">						if(FieldValueUtil.isMissing(trueValue) &amp;&amp; mapMissingTo != null){</span>
+<span class="nc" id="L325">							return FieldValueUtil.create(TypeInfos.CATEGORICAL_STRING, mapMissingTo);</span>
+						}
+
+<span class="fc" id="L328">						values.add(trueValue);</span>
+
+<span class="fc bfc" id="L330" title="All 2 branches covered.">						if(arguments.hasNext()){</span>
+<span class="fc" id="L331">							arguments.next();</span>
+
+<span class="fc" id="L333">							values.add(FieldValues.MISSING_VALUE);</span>
+						}
+<span class="fc" id="L335">					}</span>
+				} else
+
+				// Skip THEN part, evaluate ELSE part
+				{
+<span class="fc bfc" id="L340" title="All 2 branches covered.">					if(arguments.hasNext()){</span>
+<span class="fc" id="L341">						arguments.next();</span>
+
+<span class="fc" id="L343">						values.add(FieldValues.MISSING_VALUE);</span>
+
+<span class="fc bfc" id="L345" title="All 2 branches covered.">						if(arguments.hasNext()){</span>
+<span class="fc" id="L346">							FieldValue falseValue = evaluate(arguments.next(), context);</span>
+
+<span class="pc bpc" id="L348" title="3 of 4 branches missed.">							if(FieldValueUtil.isMissing(falseValue) &amp;&amp; mapMissingTo != null){</span>
+<span class="nc" id="L349">								return FieldValueUtil.create(TypeInfos.CATEGORICAL_STRING, mapMissingTo);</span>
+							}
+
+<span class="fc" id="L352">							values.add(falseValue);</span>
+						}
+					}
+				}
+			}
+		}
+
+<span class="fc bfc" id="L359" title="All 2 branches covered.">		while(arguments.hasNext()){</span>
+<span class="fc" id="L360">			FieldValue value = evaluate(arguments.next(), context);</span>
+
+			// &quot;If a mapMissingTo value is specified and any of the input values of the function are missing, then the function is not applied at all and the mapMissingTo value is returned instead&quot;
+<span class="fc bfc" id="L363" title="All 4 branches covered.">			if(FieldValueUtil.isMissing(value) &amp;&amp; mapMissingTo != null){</span>
+<span class="fc" id="L364">				return FieldValueUtil.create(TypeInfos.CATEGORICAL_STRING, mapMissingTo);</span>
+			}
+
+<span class="fc" id="L367">			values.add(value);</span>
+<span class="fc" id="L368">		}</span>
+
+<span class="fc" id="L370">		String defaultValue = apply.getDefaultValue();</span>
+
+		FieldValue result;
+
+		try {
+<span class="fc" id="L375">			result = FunctionUtil.evaluate(apply, values, context);</span>
+<span class="fc" id="L376">		} catch(InvalidResultException ire){</span>
+<span class="fc" id="L377">			InvalidValueTreatmentMethod invalidValueTreatmentMethod = apply.getInvalidValueTreatment();</span>
+
+<span class="pc bpc" id="L379" title="1 of 4 branches missed.">			switch(invalidValueTreatmentMethod){</span>
+				case RETURN_INVALID:
+<span class="fc" id="L381">					throw new InvalidResultException(&quot;Function application yielded an invalid result&quot;, apply)</span>
+<span class="fc" id="L382">						.initCause(ire);</span>
+				case AS_IS:
+					// Re-throw the given InvalidResultException instance
+<span class="fc" id="L385">					throw ire;</span>
+				case AS_MISSING:
+<span class="fc" id="L387">					return FieldValueUtil.create(TypeInfos.CATEGORICAL_STRING, defaultValue);</span>
+				default:
+<span class="nc" id="L389">					throw new UnsupportedAttributeException(apply, invalidValueTreatmentMethod);</span>
+			}
+<span class="fc" id="L391">		}</span>
+
+		// &quot;If a defaultValue value is specified and the function produced a missing value, then the defaultValue is returned&quot;
+<span class="fc bfc" id="L394" title="All 4 branches covered.">		if(result == null &amp;&amp; defaultValue != null){</span>
+<span class="fc" id="L395">			return FieldValueUtil.create(TypeInfos.CATEGORICAL_STRING, defaultValue);</span>
+		}
+
+<span class="fc" id="L398">		return result;</span>
+	}
+
+	@SuppressWarnings (
+		value = {&quot;unchecked&quot;}
+	)
+	static
+	public FieldValue evaluateAggregate(Aggregate aggregate, EvaluationContext context){
+<span class="fc" id="L406">		FieldValue value = context.evaluate(ensureField(aggregate));</span>
+
+<span class="pc bpc" id="L408" title="1 of 2 branches missed.">		if(FieldValueUtil.isMissing(value)){</span>
+<span class="nc" id="L409">			return FieldValues.MISSING_VALUE;</span>
+		}
+
+		// The JPMML library operates with single records, so it's impossible to implement &quot;proper&quot; aggregation over multiple records.
+		// It is assumed that application developers have performed the aggregation beforehand
+<span class="fc" id="L414">		Collection&lt;?&gt; values = value.asCollection();</span>
+
+<span class="fc" id="L416">		FieldName groupName = aggregate.getGroupField();</span>
+<span class="pc bpc" id="L417" title="1 of 2 branches missed.">		if(groupName != null){</span>
+<span class="nc" id="L418">			FieldValue groupValue = context.evaluate(groupName);</span>
+
+			// Ensure that the group value is a simple type, not a collection type
+<span class="nc" id="L421">			TypeUtil.getDataType(FieldValueUtil.getValue(groupValue));</span>
+		}
+
+<span class="fc" id="L424">		values = values.stream()</span>
+			// &quot;Missing values are ignored&quot;
+<span class="fc" id="L426">			.filter(Objects::nonNull)</span>
+<span class="fc" id="L427">			.map(object -&gt; FieldValueUtil.create(value, object))</span>
+<span class="fc" id="L428">			.collect(Collectors.toList());</span>
+
+<span class="fc" id="L430">		Aggregate.Function function = aggregate.getFunction();</span>
+<span class="pc bpc" id="L431" title="1 of 2 branches missed.">		if(function == null){</span>
+<span class="nc" id="L432">			throw new MissingAttributeException(aggregate, PMMLAttributes.AGGREGATE_FUNCTION);</span>
+		}
+
+<span class="pc bpc" id="L435" title="1 of 6 branches missed.">		switch(function){</span>
+			case COUNT:
+<span class="fc" id="L437">				return FieldValueUtil.create(TypeInfos.CONTINUOUS_INTEGER, values.size());</span>
+			case SUM:
+<span class="fc" id="L439">				return Functions.SUM.evaluate((List&lt;FieldValue&gt;)values);</span>
+			case AVERAGE:
+<span class="fc" id="L441">				return Functions.AVG.evaluate((List&lt;FieldValue&gt;)values);</span>
+			case MIN:
+<span class="fc" id="L443">				return Collections.min((List&lt;ScalarValue&gt;)values);</span>
+			case MAX:
+<span class="fc" id="L445">				return Collections.max((List&lt;ScalarValue&gt;)values);</span>
+			default:
+<span class="nc" id="L447">				throw new UnsupportedAttributeException(aggregate, function);</span>
+		}
+	}
+
+	static
+	public FieldValue evaluateJavaExpression(JavaExpression javaExpression, EvaluationContext context){
+<span class="nc" id="L453">		FieldValue value = javaExpression.evaluate(context);</span>
+
+<span class="nc" id="L455">		return value;</span>
+	}
+
+	static
+	public DataType getConstantDataType(Constant constant){
+<span class="fc" id="L460">		DataType dataType = constant.getDataType();</span>
+<span class="fc bfc" id="L461" title="All 2 branches covered.">		if(dataType == null){</span>
+<span class="fc" id="L462">			return TypeUtil.getConstantDataType(constant.getValue());</span>
+		}
+
+<span class="fc" id="L465">		return dataType;</span>
+	}
+
+	static
+	public &lt;E extends Expression &amp; HasDataType&lt;E&gt;&gt; DataType getDataType(E expression, DataType defaultDataType){
+<span class="fc" id="L470">		DataType dataType = expression.getDataType();</span>
+<span class="pc bpc" id="L471" title="1 of 2 branches missed.">		if(dataType == null){</span>
+<span class="fc" id="L472">			return defaultDataType;</span>
+		}
+
+<span class="nc" id="L475">		return dataType;</span>
+	}
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.0.201801022044</span></div></body></html>

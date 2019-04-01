@@ -1,0 +1,417 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>ReportingDoubleValue.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">JPMML evaluator</a> &gt; <a href="index.source.html" class="el_package">org.jpmml.evaluator</a> &gt; <span class="el_source">ReportingDoubleValue.java</span></div><h1>ReportingDoubleValue.java</h1><pre class="source lang-java linenums">/*
+ * Copyright (c) 2017 Villu Ruusmann
+ *
+ * This file is part of JPMML-Evaluator
+ *
+ * JPMML-Evaluator is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Affero General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * JPMML-Evaluator is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Affero General Public License for more details.
+ *
+ * You should have received a copy of the GNU Affero General Public License
+ * along with JPMML-Evaluator.  If not, see &lt;http://www.gnu.org/licenses/&gt;.
+ */
+package org.jpmml.evaluator;
+
+
+public class ReportingDoubleValue
+    extends DoubleValue
+    implements HasReport
+{
+
+<span class="fc" id="L27">    private org.jpmml.evaluator.Report report = null;</span>
+
+    public ReportingDoubleValue(double value, org.jpmml.evaluator.Report report) {
+<span class="fc" id="L30">        super(value);</span>
+<span class="fc" id="L31">        setReport(report);</span>
+<span class="fc" id="L32">        report(new StringBuilder(256).append(&quot;&lt;cn&gt;&quot;).append(value).append(&quot;&lt;/cn&gt;&quot;).toString());</span>
+<span class="fc" id="L33">    }</span>
+
+    public ReportingDoubleValue(double value, org.jpmml.evaluator.Report report, String expression) {
+<span class="fc" id="L36">        super(value);</span>
+<span class="fc" id="L37">        setReport(report);</span>
+<span class="fc bfc" id="L38" title="All 2 branches covered.">        if (expression!= null) {</span>
+<span class="fc" id="L39">            report(expression);</span>
+        }
+<span class="fc" id="L41">    }</span>
+
+    @Override
+    public ReportingDoubleValue copy() {
+<span class="fc" id="L45">        org.jpmml.evaluator.Report report = getReport();</span>
+<span class="fc" id="L46">        return new ReportingDoubleValue(super.value, report.copy(), null);</span>
+    }
+
+    @Override
+    public ReportingDoubleValue add(double value) {
+<span class="fc" id="L51">        ReportingDoubleValue result = ((ReportingDoubleValue) super.add(value));</span>
+<span class="fc bfc" id="L52" title="All 2 branches covered.">        if (hasExpression()) {</span>
+<span class="fc" id="L53">            report(new StringBuilder(256).append(&quot;&lt;apply&gt;&lt;plus/&gt;&quot;).append(getExpression()).append(&quot;&lt;cn&gt;&quot;).append(value).append(&quot;&lt;/cn&gt;&quot;).append(&quot;&lt;/apply&gt;&quot;).toString());</span>
+        } else {
+<span class="fc" id="L55">            report(new StringBuilder(256).append(&quot;&lt;cn&gt;&quot;).append(value).append(&quot;&lt;/cn&gt;&quot;).toString());</span>
+        }
+<span class="fc" id="L57">        return result;</span>
+    }
+
+    @Override
+    public ReportingDoubleValue add(org.jpmml.evaluator.Value&lt;? extends Number&gt; value) {
+<span class="fc" id="L62">        ReportingDoubleValue result = ((ReportingDoubleValue) super.add(value));</span>
+<span class="fc bfc" id="L63" title="All 2 branches covered.">        if (hasExpression()) {</span>
+<span class="fc" id="L64">            report(new StringBuilder(256).append(&quot;&lt;apply&gt;&lt;plus/&gt;&quot;).append(getExpression()).append(&quot;&lt;cn&gt;&quot;).append(value.doubleValue()).append(&quot;&lt;/cn&gt;&quot;).append(&quot;&lt;/apply&gt;&quot;).toString());</span>
+        } else {
+<span class="fc" id="L66">            report(new StringBuilder(256).append(&quot;&lt;cn&gt;&quot;).append(value.doubleValue()).append(&quot;&lt;/cn&gt;&quot;).toString());</span>
+        }
+<span class="fc" id="L68">        return result;</span>
+    }
+
+    @Override
+    public ReportingDoubleValue add(double coefficient, Number factor) {
+<span class="fc" id="L73">        ReportingDoubleValue result = ((ReportingDoubleValue) super.add(coefficient, factor));</span>
+<span class="fc bfc" id="L74" title="All 2 branches covered.">        if (hasExpression()) {</span>
+<span class="fc" id="L75">            report(new StringBuilder(256).append(&quot;&lt;apply&gt;&lt;plus/&gt;&quot;).append(getExpression()).append(&quot;&lt;apply&gt;&lt;times/&gt;&quot;).append(&quot;&lt;cn&gt;&quot;).append(coefficient).append(&quot;&lt;/cn&gt;&quot;).append(&quot;&lt;cn&gt;&quot;).append(factor.doubleValue()).append(&quot;&lt;/cn&gt;&quot;).append(&quot;&lt;/apply&gt;&lt;/apply&gt;&quot;).toString());</span>
+        } else {
+<span class="fc" id="L77">            report(new StringBuilder(256).append(&quot;&lt;apply&gt;&lt;times/&gt;&quot;).append(&quot;&lt;cn&gt;&quot;).append(coefficient).append(&quot;&lt;/cn&gt;&quot;).append(&quot;&lt;cn&gt;&quot;).append(factor.doubleValue()).append(&quot;&lt;/cn&gt;&quot;).append(&quot;&lt;/apply&gt;&quot;).toString());</span>
+        }
+<span class="fc" id="L79">        return result;</span>
+    }
+
+    @Override
+    public ReportingDoubleValue add(double coefficient, Number firstFactor, Number secondFactor) {
+<span class="nc" id="L84">        ReportingDoubleValue result = ((ReportingDoubleValue) super.add(coefficient, firstFactor, secondFactor));</span>
+<span class="nc bnc" id="L85" title="All 2 branches missed.">        if (hasExpression()) {</span>
+<span class="nc" id="L86">            report(new StringBuilder(256).append(&quot;&lt;apply&gt;&lt;plus/&gt;&quot;).append(getExpression()).append(&quot;&lt;apply&gt;&lt;times/&gt;&quot;).append(&quot;&lt;cn&gt;&quot;).append(coefficient).append(&quot;&lt;/cn&gt;&quot;).append(&quot;&lt;cn&gt;&quot;).append(firstFactor.doubleValue()).append(&quot;&lt;/cn&gt;&quot;).append(&quot;&lt;cn&gt;&quot;).append(secondFactor.doubleValue()).append(&quot;&lt;/cn&gt;&quot;).append(&quot;&lt;/apply&gt;&lt;/apply&gt;&quot;).toString());</span>
+        } else {
+<span class="nc" id="L88">            report(new StringBuilder(256).append(&quot;&lt;apply&gt;&lt;times/&gt;&quot;).append(&quot;&lt;cn&gt;&quot;).append(coefficient).append(&quot;&lt;/cn&gt;&quot;).append(&quot;&lt;cn&gt;&quot;).append(firstFactor.doubleValue()).append(&quot;&lt;/cn&gt;&quot;).append(&quot;&lt;cn&gt;&quot;).append(secondFactor.doubleValue()).append(&quot;&lt;/cn&gt;&quot;).append(&quot;&lt;/apply&gt;&quot;).toString());</span>
+        }
+<span class="nc" id="L90">        return result;</span>
+    }
+
+    @Override
+    public ReportingDoubleValue add(double coefficient, Number... factors) {
+<span class="nc" id="L95">        ReportingDoubleValue result = ((ReportingDoubleValue) super.add(coefficient));</span>
+<span class="nc bnc" id="L96" title="All 2 branches missed.">        if (hasExpression()) {</span>
+<span class="nc" id="L97">            report(new StringBuilder(256).append(&quot;&lt;apply&gt;&lt;plus/&gt;&quot;).append(getExpression()).append(&quot;&lt;apply&gt;&lt;times/&gt;&quot;).append(&quot;&lt;cn&gt;&quot;).append(coefficient).append(&quot;&lt;/cn&gt;&quot;).append(format(factors)).append(&quot;&lt;/apply&gt;&lt;/apply&gt;&quot;).toString());</span>
+        } else {
+<span class="nc" id="L99">            report(new StringBuilder(256).append(&quot;&lt;apply&gt;&lt;times/&gt;&quot;).append(&quot;&lt;cn&gt;&quot;).append(coefficient).append(&quot;&lt;/cn&gt;&quot;).append(format(factors)).append(&quot;&lt;/apply&gt;&quot;).toString());</span>
+        }
+<span class="nc" id="L101">        return result;</span>
+    }
+
+    @Override
+    public ReportingDoubleValue add(double coefficient, Number factor, int exponent) {
+<span class="nc" id="L106">        ReportingDoubleValue result = ((ReportingDoubleValue) super.add(coefficient, factor, exponent));</span>
+<span class="nc bnc" id="L107" title="All 2 branches missed.">        if (hasExpression()) {</span>
+<span class="nc" id="L108">            report(new StringBuilder(256).append(&quot;&lt;apply&gt;&lt;plus/&gt;&quot;).append(getExpression()).append(&quot;&lt;apply&gt;&lt;times/&gt;&quot;).append(&quot;&lt;cn&gt;&quot;).append(coefficient).append(&quot;&lt;/cn&gt;&quot;).append(&quot;&lt;apply&gt;&lt;power/&gt;&quot;).append(&quot;&lt;cn&gt;&quot;).append(factor.doubleValue()).append(&quot;&lt;/cn&gt;&quot;).append(&quot;&lt;cn&gt;&quot;).append(((double) exponent)).append(&quot;&lt;/cn&gt;&quot;).append(&quot;&lt;/apply&gt;&lt;/apply&gt;&lt;/apply&gt;&quot;).toString());</span>
+        } else {
+<span class="nc" id="L110">            report(new StringBuilder(256).append(&quot;&lt;apply&gt;&lt;times/&gt;&quot;).append(&quot;&lt;cn&gt;&quot;).append(coefficient).append(&quot;&lt;/cn&gt;&quot;).append(&quot;&lt;apply&gt;&lt;power/&gt;&quot;).append(&quot;&lt;cn&gt;&quot;).append(factor.doubleValue()).append(&quot;&lt;/cn&gt;&quot;).append(&quot;&lt;cn&gt;&quot;).append(((double) exponent)).append(&quot;&lt;/cn&gt;&quot;).append(&quot;&lt;/apply&gt;&lt;/apply&gt;&quot;).toString());</span>
+        }
+<span class="nc" id="L112">        return result;</span>
+    }
+
+    @Override
+    public ReportingDoubleValue subtract(double value) {
+<span class="fc" id="L117">        ReportingDoubleValue result = ((ReportingDoubleValue) super.subtract(value));</span>
+<span class="pc bpc" id="L118" title="1 of 2 branches missed.">        if (hasExpression()) {</span>
+<span class="fc" id="L119">            report(new StringBuilder(256).append(&quot;&lt;apply&gt;&lt;minus/&gt;&quot;).append(getExpression()).append(&quot;&lt;cn&gt;&quot;).append(value).append(&quot;&lt;/cn&gt;&quot;).append(&quot;&lt;/apply&gt;&quot;).toString());</span>
+        } else {
+<span class="nc" id="L121">            report(new StringBuilder(256).append(&quot;&lt;apply&gt;&lt;minus/&gt;&quot;).append(&quot;&lt;cn&gt;&quot;).append(value).append(&quot;&lt;/cn&gt;&quot;).append(&quot;&lt;/apply&gt;&quot;).toString());</span>
+        }
+<span class="fc" id="L123">        return result;</span>
+    }
+
+    @Override
+    public ReportingDoubleValue subtract(org.jpmml.evaluator.Value&lt;? extends Number&gt; value) {
+<span class="fc" id="L128">        ReportingDoubleValue result = ((ReportingDoubleValue) super.subtract(value));</span>
+<span class="pc bpc" id="L129" title="1 of 2 branches missed.">        if (hasExpression()) {</span>
+<span class="fc" id="L130">            report(new StringBuilder(256).append(&quot;&lt;apply&gt;&lt;minus/&gt;&quot;).append(getExpression()).append(&quot;&lt;cn&gt;&quot;).append(value.doubleValue()).append(&quot;&lt;/cn&gt;&quot;).append(&quot;&lt;/apply&gt;&quot;).toString());</span>
+        } else {
+<span class="nc" id="L132">            report(new StringBuilder(256).append(&quot;&lt;apply&gt;&lt;minus/&gt;&quot;).append(&quot;&lt;cn&gt;&quot;).append(value.doubleValue()).append(&quot;&lt;/cn&gt;&quot;).append(&quot;&lt;/apply&gt;&quot;).toString());</span>
+        }
+<span class="fc" id="L134">        return result;</span>
+    }
+
+    @Override
+    public ReportingDoubleValue multiply(double value) {
+<span class="fc" id="L139">        ReportingDoubleValue result = ((ReportingDoubleValue) super.multiply(value));</span>
+<span class="fc" id="L140">        report(new StringBuilder(256).append(&quot;&lt;apply&gt;&lt;times/&gt;&quot;).append(getExpression()).append(&quot;&lt;cn&gt;&quot;).append(value).append(&quot;&lt;/cn&gt;&quot;).append(&quot;&lt;/apply&gt;&quot;).toString());</span>
+<span class="fc" id="L141">        return result;</span>
+    }
+
+    @Override
+    public ReportingDoubleValue multiply(org.jpmml.evaluator.Value&lt;? extends Number&gt; value) {
+<span class="nc" id="L146">        ReportingDoubleValue result = ((ReportingDoubleValue) super.multiply(value));</span>
+<span class="nc" id="L147">        report(new StringBuilder(256).append(&quot;&lt;apply&gt;&lt;times/&gt;&quot;).append(getExpression()).append(&quot;&lt;cn&gt;&quot;).append(value.doubleValue()).append(&quot;&lt;/cn&gt;&quot;).append(&quot;&lt;/apply&gt;&quot;).toString());</span>
+<span class="nc" id="L148">        return result;</span>
+    }
+
+    @Override
+    public ReportingDoubleValue multiply(Number factor, double exponent) {
+<span class="nc" id="L153">        ReportingDoubleValue result = ((ReportingDoubleValue) super.multiply(factor, exponent));</span>
+<span class="nc" id="L154">        report(new StringBuilder(256).append(&quot;&lt;apply&gt;&lt;times/&gt;&quot;).append(getExpression()).append(&quot;&lt;apply&gt;&lt;power/&gt;&quot;).append(&quot;&lt;cn&gt;&quot;).append(factor.doubleValue()).append(&quot;&lt;/cn&gt;&quot;).append(&quot;&lt;cn&gt;&quot;).append(exponent).append(&quot;&lt;/cn&gt;&quot;).append(&quot;&lt;/apply&gt;&lt;/apply&gt;&quot;).toString());</span>
+<span class="nc" id="L155">        return result;</span>
+    }
+
+    @Override
+    public ReportingDoubleValue divide(double value) {
+<span class="fc" id="L160">        ReportingDoubleValue result = ((ReportingDoubleValue) super.divide(value));</span>
+<span class="fc" id="L161">        report(new StringBuilder(256).append(&quot;&lt;apply&gt;&lt;divide/&gt;&quot;).append(getExpression()).append(&quot;&lt;cn&gt;&quot;).append(value).append(&quot;&lt;/cn&gt;&quot;).append(&quot;&lt;/apply&gt;&quot;).toString());</span>
+<span class="fc" id="L162">        return result;</span>
+    }
+
+    @Override
+    public ReportingDoubleValue divide(org.jpmml.evaluator.Value&lt;? extends Number&gt; value) {
+<span class="fc" id="L167">        ReportingDoubleValue result = ((ReportingDoubleValue) super.divide(value));</span>
+<span class="fc" id="L168">        report(new StringBuilder(256).append(&quot;&lt;apply&gt;&lt;divide/&gt;&quot;).append(getExpression()).append(&quot;&lt;cn&gt;&quot;).append(value.doubleValue()).append(&quot;&lt;/cn&gt;&quot;).append(&quot;&lt;/apply&gt;&quot;).toString());</span>
+<span class="fc" id="L169">        return result;</span>
+    }
+
+    @Override
+    public ReportingDoubleValue residual(org.jpmml.evaluator.Value&lt;? extends Number&gt; value) {
+<span class="fc" id="L174">        ReportingDoubleValue result = ((ReportingDoubleValue) super.residual(value));</span>
+<span class="fc" id="L175">        report(new StringBuilder(256).append(&quot;&lt;apply&gt;&lt;minus/&gt;&lt;cn&gt;1&lt;/cn&gt;&quot;).append(&quot;&lt;cn&gt;&quot;).append(value.doubleValue()).append(&quot;&lt;/cn&gt;&quot;).append(&quot;&lt;/apply&gt;&quot;).toString());</span>
+<span class="fc" id="L176">        return result;</span>
+    }
+
+    @Override
+    public ReportingDoubleValue square() {
+<span class="nc" id="L181">        ReportingDoubleValue result = ((ReportingDoubleValue) super.square());</span>
+<span class="nc" id="L182">        report(new StringBuilder(256).append(&quot;&lt;apply&gt;&lt;power/&gt;&quot;).append(getExpression()).append(&quot;&lt;cn&gt;2&lt;/cn&gt;&lt;/apply&gt;&quot;).toString());</span>
+<span class="nc" id="L183">        return result;</span>
+    }
+
+    @Override
+    public ReportingDoubleValue power(double value) {
+<span class="fc" id="L188">        ReportingDoubleValue result = ((ReportingDoubleValue) super.power(value));</span>
+<span class="fc" id="L189">        report(new StringBuilder(256).append(&quot;&lt;apply&gt;&lt;power/&gt;&quot;).append(getExpression()).append(&quot;{0}&lt;/apply&gt;&quot;).toString());</span>
+<span class="fc" id="L190">        return result;</span>
+    }
+
+    @Override
+    public ReportingDoubleValue reciprocal() {
+<span class="nc" id="L195">        ReportingDoubleValue result = ((ReportingDoubleValue) super.reciprocal());</span>
+<span class="nc" id="L196">        report(new StringBuilder(256).append(&quot;&lt;apply&gt;&lt;divide/&gt;&lt;cn&gt;1&lt;/cn&gt;&quot;).append(getExpression()).append(&quot;&lt;/apply&gt;&quot;).toString());</span>
+<span class="nc" id="L197">        return result;</span>
+    }
+
+    @Override
+    public ReportingDoubleValue elliott() {
+<span class="nc" id="L202">        ReportingDoubleValue result = ((ReportingDoubleValue) super.elliott());</span>
+<span class="nc" id="L203">        report(new StringBuilder(256).append(&quot;&lt;apply&gt;&lt;ci&gt;elliott&lt;/ci&gt;&quot;).append(getExpression()).append(&quot;&lt;/apply&gt;&quot;).toString());</span>
+<span class="nc" id="L204">        return result;</span>
+    }
+
+    @Override
+    public ReportingDoubleValue exp() {
+<span class="fc" id="L209">        ReportingDoubleValue result = ((ReportingDoubleValue) super.exp());</span>
+<span class="fc" id="L210">        report(new StringBuilder(256).append(&quot;&lt;apply&gt;&lt;exp/&gt;&quot;).append(getExpression()).append(&quot;&lt;/apply&gt;&quot;).toString());</span>
+<span class="fc" id="L211">        return result;</span>
+    }
+
+    @Override
+    public ReportingDoubleValue ln() {
+<span class="fc" id="L216">        ReportingDoubleValue result = ((ReportingDoubleValue) super.ln());</span>
+<span class="fc" id="L217">        report(new StringBuilder(256).append(&quot;&lt;apply&gt;&lt;ln/&gt;&quot;).append(getExpression()).append(&quot;&lt;/apply&gt;&quot;).toString());</span>
+<span class="fc" id="L218">        return result;</span>
+    }
+
+    @Override
+    public ReportingDoubleValue gauss() {
+<span class="nc" id="L223">        ReportingDoubleValue result = ((ReportingDoubleValue) super.gauss());</span>
+<span class="nc" id="L224">        report(new StringBuilder(256).append(&quot;&lt;apply&gt;&lt;ci&gt;gauss&lt;/ci&gt;&quot;).append(getExpression()).append(&quot;&lt;/apply&gt;&quot;).toString());</span>
+<span class="nc" id="L225">        return result;</span>
+    }
+
+    @Override
+    public ReportingDoubleValue inverseLogit() {
+<span class="fc" id="L230">        ReportingDoubleValue result = ((ReportingDoubleValue) super.inverseLogit());</span>
+<span class="fc" id="L231">        report(new StringBuilder(256).append(&quot;&lt;apply&gt;&lt;apply&gt;&lt;inverse/&gt;&lt;ci&gt;logit&lt;/ci&gt;&lt;/apply&gt;&quot;).append(getExpression()).append(&quot;&lt;/apply&gt;&quot;).toString());</span>
+<span class="fc" id="L232">        return result;</span>
+    }
+
+    @Override
+    public ReportingDoubleValue inverseCloglog() {
+<span class="nc" id="L237">        ReportingDoubleValue result = ((ReportingDoubleValue) super.inverseCloglog());</span>
+<span class="nc" id="L238">        report(new StringBuilder(256).append(&quot;&lt;apply&gt;&lt;apply&gt;&lt;inverse/&gt;&lt;ci&gt;cloglog&lt;/ci&gt;&lt;/apply&gt;&quot;).append(getExpression()).append(&quot;&lt;/apply&gt;&quot;).toString());</span>
+<span class="nc" id="L239">        return result;</span>
+    }
+
+    @Override
+    public ReportingDoubleValue inverseLoglog() {
+<span class="nc" id="L244">        ReportingDoubleValue result = ((ReportingDoubleValue) super.inverseLoglog());</span>
+<span class="nc" id="L245">        report(new StringBuilder(256).append(&quot;&lt;apply&gt;&lt;apply&gt;&lt;inverse/&gt;&lt;ci&gt;loglog&lt;/ci&gt;&lt;/apply&gt;&quot;).append(getExpression()).append(&quot;&lt;/apply&gt;&quot;).toString());</span>
+<span class="nc" id="L246">        return result;</span>
+    }
+
+    @Override
+    public ReportingDoubleValue inverseLogc() {
+<span class="nc" id="L251">        ReportingDoubleValue result = ((ReportingDoubleValue) super.inverseLogc());</span>
+<span class="nc" id="L252">        report(new StringBuilder(256).append(&quot;&lt;apply&gt;&lt;apply&gt;&lt;inverse/&gt;&lt;ci&gt;logc&lt;/ci&gt;&lt;/apply&gt;&quot;).append(getExpression()).append(&quot;&lt;/apply&gt;&quot;).toString());</span>
+<span class="nc" id="L253">        return result;</span>
+    }
+
+    @Override
+    public ReportingDoubleValue inverseNegbin(double value) {
+<span class="nc" id="L258">        ReportingDoubleValue result = ((ReportingDoubleValue) super.inverseNegbin(value));</span>
+<span class="nc" id="L259">        report(new StringBuilder(256).append(&quot;&lt;apply&gt;&lt;apply&gt;&lt;inverse/&gt;&lt;ci&gt;negbin&lt;/ci&gt;&lt;/apply&gt;&quot;).append(getExpression()).append(&quot;&lt;cn&gt;&quot;).append(value).append(&quot;&lt;/cn&gt;&quot;).append(&quot;&lt;/apply&gt;&quot;).toString());</span>
+<span class="nc" id="L260">        return result;</span>
+    }
+
+    @Override
+    public ReportingDoubleValue inverseOddspower(double value) {
+<span class="nc" id="L265">        ReportingDoubleValue result = ((ReportingDoubleValue) super.inverseOddspower(value));</span>
+<span class="nc" id="L266">        report(new StringBuilder(256).append(&quot;&lt;apply&gt;&lt;apply&gt;&lt;inverse/&gt;&lt;ci&gt;oddspower&lt;/ci&gt;&lt;/apply&gt;&quot;).append(getExpression()).append(&quot;&lt;cn&gt;&quot;).append(value).append(&quot;&lt;/cn&gt;&quot;).append(&quot;&lt;/apply&gt;&quot;).toString());</span>
+<span class="nc" id="L267">        return result;</span>
+    }
+
+    @Override
+    public ReportingDoubleValue inversePower(double value) {
+<span class="nc" id="L272">        ReportingDoubleValue result = ((ReportingDoubleValue) super.inversePower(value));</span>
+<span class="nc" id="L273">        report(new StringBuilder(256).append(&quot;&lt;apply&gt;&lt;power/&gt;&quot;).append(getExpression()).append(&quot;&lt;apply&gt;&lt;divide/&gt;&lt;cn&gt;1&lt;/cn&gt;&quot;).append(&quot;&lt;cn&gt;&quot;).append(value).append(&quot;&lt;/cn&gt;&quot;).append(&quot;&lt;/apply&gt;&lt;/apply&gt;&quot;).toString());</span>
+<span class="nc" id="L274">        return result;</span>
+    }
+
+    @Override
+    public ReportingDoubleValue inverseCauchit() {
+<span class="nc" id="L279">        ReportingDoubleValue result = ((ReportingDoubleValue) super.inverseCauchit());</span>
+<span class="nc" id="L280">        report(new StringBuilder(256).append(&quot;&lt;apply&gt;&lt;apply&gt;&lt;inverse/&gt;&lt;ci&gt;cauchit&lt;/ci&gt;&lt;/apply&gt;&quot;).append(getExpression()).append(&quot;&lt;/apply&gt;&quot;).toString());</span>
+<span class="nc" id="L281">        return result;</span>
+    }
+
+    @Override
+    public ReportingDoubleValue inverseProbit() {
+<span class="nc" id="L286">        ReportingDoubleValue result = ((ReportingDoubleValue) super.inverseProbit());</span>
+<span class="nc" id="L287">        report(new StringBuilder(256).append(&quot;&lt;apply&gt;&lt;apply&gt;&lt;inverse/&gt;&lt;ci&gt;probit&lt;/ci&gt;&lt;/apply&gt;&quot;).append(getExpression()).append(&quot;&lt;/apply&gt;&quot;).toString());</span>
+<span class="nc" id="L288">        return result;</span>
+    }
+
+    @Override
+    public ReportingDoubleValue sin() {
+<span class="nc" id="L293">        ReportingDoubleValue result = ((ReportingDoubleValue) super.sin());</span>
+<span class="nc" id="L294">        report(new StringBuilder(256).append(&quot;&lt;apply&gt;&lt;sin/&gt;&quot;).append(getExpression()).append(&quot;&lt;/apply&gt;&quot;).toString());</span>
+<span class="nc" id="L295">        return result;</span>
+    }
+
+    @Override
+    public ReportingDoubleValue cos() {
+<span class="nc" id="L300">        ReportingDoubleValue result = ((ReportingDoubleValue) super.cos());</span>
+<span class="nc" id="L301">        report(new StringBuilder(256).append(&quot;&lt;apply&gt;&lt;cos/&gt;&quot;).append(getExpression()).append(&quot;&lt;/apply&gt;&quot;).toString());</span>
+<span class="nc" id="L302">        return result;</span>
+    }
+
+    @Override
+    public ReportingDoubleValue arctan() {
+<span class="nc" id="L307">        ReportingDoubleValue result = ((ReportingDoubleValue) super.arctan());</span>
+<span class="nc" id="L308">        report(new StringBuilder(256).append(&quot;&lt;apply&gt;&lt;divide/&gt;&lt;apply&gt;&lt;times/&gt;&lt;cn&gt;2&lt;/cn&gt;&lt;apply&gt;&lt;arctan/&gt;&quot;).append(getExpression()).append(&quot;&lt;/apply&gt;&lt;/apply&gt;&lt;pi/&gt;&lt;/apply&gt;&quot;).toString());</span>
+<span class="nc" id="L309">        return result;</span>
+    }
+
+    @Override
+    public ReportingDoubleValue tanh() {
+<span class="nc" id="L314">        ReportingDoubleValue result = ((ReportingDoubleValue) super.tanh());</span>
+<span class="nc" id="L315">        report(new StringBuilder(256).append(&quot;&lt;apply&gt;&lt;tanh/&gt;&quot;).append(getExpression()).append(&quot;&lt;/apply&gt;&quot;).toString());</span>
+<span class="nc" id="L316">        return result;</span>
+    }
+
+    @Override
+    public ReportingDoubleValue threshold(double value) {
+<span class="nc" id="L321">        ReportingDoubleValue result = ((ReportingDoubleValue) super.threshold(value));</span>
+<span class="nc" id="L322">        report(new StringBuilder(256).append(&quot;&lt;apply&gt;&lt;ci&gt;threshold&lt;/ci&gt;&quot;).append(getExpression()).append(&quot;&lt;cn&gt;&quot;).append(value).append(&quot;&lt;/cn&gt;&quot;).append(&quot;&lt;/apply&gt;&quot;).toString());</span>
+<span class="nc" id="L323">        return result;</span>
+    }
+
+    @Override
+    public ReportingDoubleValue relu() {
+<span class="nc" id="L328">        ReportingDoubleValue result = ((ReportingDoubleValue) super.relu());</span>
+<span class="nc" id="L329">        report(new StringBuilder(256).append(&quot;&lt;apply&gt;&lt;max/&gt;&lt;cn&gt;0&lt;/cn&gt;&quot;).append(getExpression()).append(&quot;&lt;/apply&gt;&quot;).toString());</span>
+<span class="nc" id="L330">        return result;</span>
+    }
+
+    @Override
+    public ReportingDoubleValue abs() {
+<span class="fc" id="L335">        ReportingDoubleValue result = ((ReportingDoubleValue) super.abs());</span>
+<span class="fc" id="L336">        report(new StringBuilder(256).append(&quot;&lt;apply&gt;&lt;abs/&gt;&quot;).append(getExpression()).append(&quot;&lt;/apply&gt;&quot;).toString());</span>
+<span class="fc" id="L337">        return result;</span>
+    }
+
+    @Override
+    public ReportingDoubleValue gaussSim(double value) {
+<span class="nc" id="L342">        ReportingDoubleValue result = ((ReportingDoubleValue) super.gaussSim(value));</span>
+<span class="nc" id="L343">        report(new StringBuilder(256).append(&quot;&lt;apply&gt;&lt;ci&gt;gaussSim&lt;/ci&gt;&quot;).append(getExpression()).append(&quot;&lt;cn&gt;&quot;).append(value).append(&quot;&lt;/cn&gt;&quot;).append(&quot;&lt;/apply&gt;&quot;).toString());</span>
+<span class="nc" id="L344">        return result;</span>
+    }
+
+    @Override
+    public ReportingDoubleValue restrict(double lowValue, double highValue) {
+<span class="fc" id="L349">        ReportingDoubleValue result = ((ReportingDoubleValue) super.restrict(lowValue, highValue));</span>
+<span class="fc" id="L350">        report(new StringBuilder(256).append(&quot;&lt;apply&gt;&lt;max/&gt;&quot;).append(&quot;&lt;cn&gt;&quot;).append(lowValue).append(&quot;&lt;/cn&gt;&quot;).append(&quot;&lt;apply&gt;&lt;min/&gt;&quot;).append(&quot;&lt;cn&gt;&quot;).append(highValue).append(&quot;&lt;/cn&gt;&quot;).append(getExpression()).append(&quot;&lt;/apply&gt;&lt;/apply&gt;&quot;).toString());</span>
+<span class="fc" id="L351">        return result;</span>
+    }
+
+    @Override
+    public ReportingDoubleValue round() {
+<span class="fc" id="L356">        ReportingDoubleValue result = ((ReportingDoubleValue) super.round());</span>
+<span class="fc" id="L357">        report(new StringBuilder(256).append(&quot;&lt;apply&gt;&lt;ci&gt;round&lt;/ci&gt;&quot;).append(getExpression()).append(&quot;&lt;/apply&gt;&quot;).toString());</span>
+<span class="fc" id="L358">        return result;</span>
+    }
+
+    @Override
+    public ReportingDoubleValue ceiling() {
+<span class="nc" id="L363">        ReportingDoubleValue result = ((ReportingDoubleValue) super.ceiling());</span>
+<span class="nc" id="L364">        report(new StringBuilder(256).append(&quot;&lt;apply&gt;&lt;ceiling/&gt;&quot;).append(getExpression()).append(&quot;&lt;/apply&gt;&quot;).toString());</span>
+<span class="nc" id="L365">        return result;</span>
+    }
+
+    @Override
+    public ReportingDoubleValue floor() {
+<span class="nc" id="L370">        ReportingDoubleValue result = ((ReportingDoubleValue) super.floor());</span>
+<span class="nc" id="L371">        report(new StringBuilder(256).append(&quot;&lt;apply&gt;&lt;floor/&gt;&quot;).append(getExpression()).append(&quot;&lt;/apply&gt;&quot;).toString());</span>
+<span class="nc" id="L372">        return result;</span>
+    }
+
+    @Override
+    public ReportingDoubleValue denormalize(double leftOrig, double leftNorm, double rightOrig, double rightNorm) {
+<span class="nc" id="L377">        ReportingDoubleValue result = ((ReportingDoubleValue) super.denormalize(leftOrig, leftNorm, rightOrig, rightNorm));</span>
+<span class="nc" id="L378">        report(new StringBuilder(256).append(&quot;&lt;apply&gt;&lt;ci&gt;denormalize&lt;/ci&gt;&quot;).append(getExpression()).append(&quot;&lt;cn&gt;&quot;).append(leftOrig).append(&quot;&lt;/cn&gt;&quot;).append(&quot;&lt;cn&gt;&quot;).append(leftNorm).append(&quot;&lt;/cn&gt;&quot;).append(&quot;&lt;cn&gt;&quot;).append(rightOrig).append(&quot;&lt;/cn&gt;&quot;).append(&quot;&lt;cn&gt;&quot;).append(rightNorm).append(&quot;&lt;/cn&gt;&quot;).append(&quot;&lt;/apply&gt;&quot;).toString());</span>
+<span class="nc" id="L379">        return result;</span>
+    }
+
+    private void report(String expression) {
+<span class="fc" id="L383">        org.jpmml.evaluator.Report report = getReport();</span>
+<span class="fc" id="L384">        org.jpmml.evaluator.Report.Entry entry = new org.jpmml.evaluator.Report.Entry(expression, getValue());</span>
+<span class="fc" id="L385">        report.add(entry);</span>
+<span class="fc" id="L386">    }</span>
+
+    private boolean hasExpression() {
+<span class="fc" id="L389">        org.jpmml.evaluator.Report report = getReport();</span>
+<span class="fc" id="L390">        return report.hasEntries();</span>
+    }
+
+    private String getExpression() {
+<span class="fc" id="L394">        org.jpmml.evaluator.Report report = getReport();</span>
+<span class="fc" id="L395">        org.jpmml.evaluator.Report.Entry entry = report.tailEntry();</span>
+<span class="fc" id="L396">        return entry.getExpression();</span>
+    }
+
+    @Override
+    public org.jpmml.evaluator.Report getReport() {
+<span class="fc" id="L401">        return this.report;</span>
+    }
+
+    private void setReport(org.jpmml.evaluator.Report report) {
+<span class="fc" id="L405">        this.report = report;</span>
+<span class="fc" id="L406">    }</span>
+
+    private static String format(Number... values) {
+<span class="nc" id="L409">        StringBuilder sb = new StringBuilder((values.length* 32));</span>
+<span class="nc bnc" id="L410" title="All 2 branches missed.">        for (Number value: values) {</span>
+<span class="nc" id="L411">            sb.append(&quot;&lt;cn&gt;&quot;).append(value.doubleValue()).append(&quot;&lt;/cn&gt;&quot;).toString();</span>
+        }
+<span class="nc" id="L413">        return sb.toString();</span>
+    }
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.2.201808211720</span></div></body></html>

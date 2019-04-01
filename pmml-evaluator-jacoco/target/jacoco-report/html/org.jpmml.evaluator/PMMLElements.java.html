@@ -1,0 +1,104 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>PMMLElements.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">PMML class model evaluator code coverage</a> &gt; <a href="index.source.html" class="el_package">org.jpmml.evaluator</a> &gt; <span class="el_source">PMMLElements.java</span></div><h1>PMMLElements.java</h1><pre class="source lang-java linenums">/*
+ * Copyright (c) 2018 Villu Ruusmann
+ *
+ * This file is part of JPMML-Evaluator
+ *
+ * JPMML-Evaluator is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Affero General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * JPMML-Evaluator is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Affero General Public License for more details.
+ *
+ * You should have received a copy of the GNU Affero General Public License
+ * along with JPMML-Evaluator.  If not, see &lt;http://www.gnu.org/licenses/&gt;.
+ */
+package org.jpmml.evaluator;
+
+import java.lang.reflect.Field;
+
+import org.dmg.pmml.ModelVerification;
+import org.dmg.pmml.NormContinuous;
+import org.dmg.pmml.PMML;
+import org.dmg.pmml.SimpleSetPredicate;
+import org.dmg.pmml.clustering.ClusteringModel;
+import org.dmg.pmml.general_regression.BaseCumHazardTables;
+import org.dmg.pmml.general_regression.BaselineStratum;
+import org.dmg.pmml.general_regression.GeneralRegressionModel;
+import org.dmg.pmml.mining.MiningModel;
+import org.dmg.pmml.mining.Segmentation;
+import org.dmg.pmml.naive_bayes.BayesInputs;
+import org.dmg.pmml.naive_bayes.BayesOutput;
+import org.dmg.pmml.naive_bayes.NaiveBayesModel;
+import org.dmg.pmml.naive_bayes.PairCounts;
+import org.dmg.pmml.naive_bayes.TargetValueCounts;
+import org.dmg.pmml.nearest_neighbor.InstanceFields;
+import org.dmg.pmml.nearest_neighbor.KNNInputs;
+import org.dmg.pmml.nearest_neighbor.NearestNeighborModel;
+import org.dmg.pmml.nearest_neighbor.TrainingInstances;
+import org.dmg.pmml.neural_network.NeuralInput;
+import org.dmg.pmml.neural_network.NeuralInputs;
+import org.dmg.pmml.neural_network.NeuralNetwork;
+import org.dmg.pmml.neural_network.NeuralOutput;
+import org.dmg.pmml.neural_network.NeuralOutputs;
+import org.dmg.pmml.regression.RegressionModel;
+import org.dmg.pmml.rule_set.RuleSet;
+import org.dmg.pmml.rule_set.RuleSetModel;
+import org.dmg.pmml.scorecard.Characteristics;
+import org.dmg.pmml.scorecard.Scorecard;
+import org.dmg.pmml.support_vector_machine.SupportVectorMachineModel;
+import org.dmg.pmml.support_vector_machine.VectorDictionary;
+import org.dmg.pmml.tree.TreeModel;
+import org.jpmml.model.ReflectionUtil;
+
+public interface PMMLElements {
+
+<span class="fc" id="L59">	Field BASELINESTRATUM_BASELINECELLS = ReflectionUtil.getField(BaselineStratum.class, &quot;baselineCells&quot;);</span>
+<span class="fc" id="L60">	Field BASECUMHAZARDTABLES_BASELINECELLS = ReflectionUtil.getField(BaseCumHazardTables.class, &quot;baselineCells&quot;);</span>
+<span class="fc" id="L61">	Field BAYESINPUTS_BAYESINPUTS = ReflectionUtil.getField(BayesInputs.class, &quot;bayesInputs&quot;);</span>
+<span class="fc" id="L62">	Field BAYESOUTPUT_TARGETVALUECOUNTS = ReflectionUtil.getField(BayesOutput.class, &quot;targetValueCounts&quot;);</span>
+<span class="fc" id="L63">	Field CHARACTERISTICS_CHARACTERISTICS = ReflectionUtil.getField(Characteristics.class, &quot;characteristics&quot;);</span>
+<span class="fc" id="L64">	Field CLUSTERINGMODEL_CLUSTERINGFIELDS = ReflectionUtil.getField(ClusteringModel.class, &quot;clusteringFields&quot;);</span>
+<span class="fc" id="L65">	Field CLUSTERINGMODEL_CLUSTERS = ReflectionUtil.getField(ClusteringModel.class, &quot;clusters&quot;);</span>
+<span class="fc" id="L66">	Field CLUSTERINGMODEL_COMPARISONMEASURE = ReflectionUtil.getField(ClusteringModel.class, &quot;comparisonMeasure&quot;);</span>
+<span class="fc" id="L67">	Field GENERALREGRESSIONMODEL_BASECUMHAZARDTABLES = ReflectionUtil.getField(GeneralRegressionModel.class, &quot;baseCumHazardTables&quot;);</span>
+<span class="fc" id="L68">	Field GENERALREGRESSIONMODEL_PARAMETERLIST = ReflectionUtil.getField(GeneralRegressionModel.class, &quot;parameterList&quot;);</span>
+<span class="fc" id="L69">	Field GENERALREGRESSIONMODEL_PARAMMATRIX = ReflectionUtil.getField(GeneralRegressionModel.class, &quot;paramMatrix&quot;);</span>
+<span class="fc" id="L70">	Field GENERALREGRESSIONMODEL_PPMATRIX = ReflectionUtil.getField(GeneralRegressionModel.class, &quot;ppMatrix&quot;);</span>
+<span class="fc" id="L71">	Field INSTANCEFIELDS_INSTANCEFIELDS = ReflectionUtil.getField(InstanceFields.class, &quot;instanceFields&quot;);</span>
+<span class="fc" id="L72">	Field KNNINPUTS_KNNINPUTS = ReflectionUtil.getField(KNNInputs.class, &quot;knnInputs&quot;);</span>
+<span class="fc" id="L73">	Field MININGMODEL_SEGMENTATION = ReflectionUtil.getField(MiningModel.class, &quot;segmentation&quot;);</span>
+<span class="fc" id="L74">	Field MODELVERIFICATION_INLINETABLE = ReflectionUtil.getField(ModelVerification.class, &quot;inlineTable&quot;);</span>
+<span class="fc" id="L75">	Field MODELVERIFICATION_VERIFICATIONFIELDS = ReflectionUtil.getField(ModelVerification.class, &quot;verificationFields&quot;);</span>
+<span class="fc" id="L76">	Field NAIVEBAYESMODEL_BAYESINPUTS = ReflectionUtil.getField(NaiveBayesModel.class, &quot;bayesInputs&quot;);</span>
+<span class="fc" id="L77">	Field NAIVEBAYESMODEL_BAYESOUTPUT = ReflectionUtil.getField(NaiveBayesModel.class, &quot;bayesOutput&quot;);</span>
+<span class="fc" id="L78">	Field NEARESTNEIGHBORMODEL_COMPARISONMEASURE = ReflectionUtil.getField(NearestNeighborModel.class, &quot;comparisonMeasure&quot;);</span>
+<span class="fc" id="L79">	Field NEARESTNEIGHBORMODEL_KNNINPUTS = ReflectionUtil.getField(NearestNeighborModel.class, &quot;knnInputs&quot;);</span>
+<span class="fc" id="L80">	Field NEARESTNEIGHBORMODEL_TRAININGINSTANCES = ReflectionUtil.getField(NearestNeighborModel.class, &quot;trainingInstances&quot;);</span>
+<span class="fc" id="L81">	Field NEURALINPUT_DERIVEDFIELD = ReflectionUtil.getField(NeuralInput.class, &quot;derivedField&quot;);</span>
+<span class="fc" id="L82">	Field NEURALINPUTS_NEURALINPUTS = ReflectionUtil.getField(NeuralInputs.class, &quot;neuralInputs&quot;);</span>
+<span class="fc" id="L83">	Field NEURALNETWORK_NEURALINPUTS = ReflectionUtil.getField(NeuralNetwork.class, &quot;neuralInputs&quot;);</span>
+<span class="fc" id="L84">	Field NEURALNETWORK_NEURALLAYERS = ReflectionUtil.getField(NeuralNetwork.class, &quot;neuralLayers&quot;);</span>
+<span class="fc" id="L85">	Field NEURALNETWORK_NEURALOUTPUTS = ReflectionUtil.getField(NeuralNetwork.class, &quot;neuralOutputs&quot;);</span>
+<span class="fc" id="L86">	Field NEURALOUTPUT_DERIVEDFIELD = ReflectionUtil.getField(NeuralOutput.class, &quot;derivedField&quot;);</span>
+<span class="fc" id="L87">	Field NEURALOUTPUTS_NEURALOUTPUTS = ReflectionUtil.getField(NeuralOutputs.class, &quot;neuralOutputs&quot;);</span>
+<span class="fc" id="L88">	Field NORMCONTINUOUS_LINEARNORMS = ReflectionUtil.getField(NormContinuous.class, &quot;linearNorms&quot;);</span>
+<span class="fc" id="L89">	Field PAIRCOUNTS_TARGETVALUECOUNTS = ReflectionUtil.getField(PairCounts.class, &quot;targetValueCounts&quot;);</span>
+<span class="fc" id="L90">	Field PMML_DATADICTIONARY = ReflectionUtil.getField(PMML.class, &quot;dataDictionary&quot;);</span>
+<span class="fc" id="L91">	Field REGRESSIONMODEL_REGRESSIONTABLES = ReflectionUtil.getField(RegressionModel.class, &quot;regressionTables&quot;);</span>
+<span class="fc" id="L92">	Field RULESET_RULESELECTIONMETHODS = ReflectionUtil.getField(RuleSet.class, &quot;ruleSelectionMethods&quot;);</span>
+<span class="fc" id="L93">	Field RULESETMODEL_RULESET = ReflectionUtil.getField(RuleSetModel.class, &quot;ruleSet&quot;);</span>
+<span class="fc" id="L94">	Field SCORECARD_CHARACTERISTICS = ReflectionUtil.getField(Scorecard.class, &quot;characteristics&quot;);</span>
+<span class="fc" id="L95">	Field SEGMENTATION_SEGMENTS = ReflectionUtil.getField(Segmentation.class, &quot;segments&quot;);</span>
+<span class="fc" id="L96">	Field SIMPLESETPREDICATE_ARRAY = ReflectionUtil.getField(SimpleSetPredicate.class, &quot;array&quot;);</span>
+<span class="fc" id="L97">	Field SUPPORTVECTORMACHINEMODEL_SUPPORTVECTORMACHINES = ReflectionUtil.getField(SupportVectorMachineModel.class, &quot;supportVectorMachines&quot;);</span>
+<span class="fc" id="L98">	Field SUPPORTVECTORMACHINEMODEL_VECTORDICTIONARY = ReflectionUtil.getField(SupportVectorMachineModel.class, &quot;vectorDictionary&quot;);</span>
+<span class="fc" id="L99">	Field TARGETVALUECOUNTS_TARGETVALUECOUNTS = ReflectionUtil.getField(TargetValueCounts.class, &quot;targetValueCounts&quot;);</span>
+<span class="fc" id="L100">	Field TRAININGINSTANCES_INSTANCEFIELDS = ReflectionUtil.getField(TrainingInstances.class, &quot;instanceFields&quot;);</span>
+<span class="fc" id="L101">	Field TREEMODEL_NODE = ReflectionUtil.getField(TreeModel.class, &quot;node&quot;);</span>
+<span class="fc" id="L102">	Field VECTORDICTIONARY_VECTORFIELDS = ReflectionUtil.getField(VectorDictionary.class, &quot;vectorFields&quot;);</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.0.201801022044</span></div></body></html>

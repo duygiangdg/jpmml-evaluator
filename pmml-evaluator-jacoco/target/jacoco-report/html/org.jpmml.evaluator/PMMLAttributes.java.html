@@ -1,0 +1,193 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>PMMLAttributes.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">PMML class model evaluator code coverage</a> &gt; <a href="index.source.html" class="el_package">org.jpmml.evaluator</a> &gt; <span class="el_source">PMMLAttributes.java</span></div><h1>PMMLAttributes.java</h1><pre class="source lang-java linenums">/*
+ * Copyright (c) 2018 Villu Ruusmann
+ *
+ * This file is part of JPMML-Evaluator
+ *
+ * JPMML-Evaluator is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Affero General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * JPMML-Evaluator is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Affero General Public License for more details.
+ *
+ * You should have received a copy of the GNU Affero General Public License
+ * along with JPMML-Evaluator.  If not, see &lt;http://www.gnu.org/licenses/&gt;.
+ */
+package org.jpmml.evaluator;
+
+import java.lang.reflect.Field;
+
+import org.dmg.pmml.Aggregate;
+import org.dmg.pmml.Apply;
+import org.dmg.pmml.Array;
+import org.dmg.pmml.CompoundPredicate;
+import org.dmg.pmml.DataField;
+import org.dmg.pmml.DerivedField;
+import org.dmg.pmml.DiscretizeBin;
+import org.dmg.pmml.FieldColumnPair;
+import org.dmg.pmml.FieldRef;
+import org.dmg.pmml.Interval;
+import org.dmg.pmml.MapValues;
+import org.dmg.pmml.MiningField;
+import org.dmg.pmml.Minkowski;
+import org.dmg.pmml.NormContinuous;
+import org.dmg.pmml.NormDiscrete;
+import org.dmg.pmml.OutputField;
+import org.dmg.pmml.ParameterField;
+import org.dmg.pmml.ScoreDistribution;
+import org.dmg.pmml.SimplePredicate;
+import org.dmg.pmml.SimpleSetPredicate;
+import org.dmg.pmml.TargetValue;
+import org.dmg.pmml.TextIndex;
+import org.dmg.pmml.TextIndexNormalization;
+import org.dmg.pmml.Value;
+import org.dmg.pmml.association.AssociationRule;
+import org.dmg.pmml.association.Item;
+import org.dmg.pmml.clustering.ClusteringField;
+import org.dmg.pmml.general_regression.BaseCumHazardTables;
+import org.dmg.pmml.general_regression.BaselineStratum;
+import org.dmg.pmml.general_regression.Category;
+import org.dmg.pmml.general_regression.GeneralRegressionModel;
+import org.dmg.pmml.general_regression.PPCell;
+import org.dmg.pmml.mining.Segmentation;
+import org.dmg.pmml.naive_bayes.BayesInput;
+import org.dmg.pmml.naive_bayes.BayesOutput;
+import org.dmg.pmml.naive_bayes.PairCounts;
+import org.dmg.pmml.naive_bayes.TargetValueCount;
+import org.dmg.pmml.naive_bayes.TargetValueStat;
+import org.dmg.pmml.nearest_neighbor.InstanceField;
+import org.dmg.pmml.nearest_neighbor.KNNInput;
+import org.dmg.pmml.nearest_neighbor.NearestNeighborModel;
+import org.dmg.pmml.neural_network.Connection;
+import org.dmg.pmml.neural_network.NeuralNetwork;
+import org.dmg.pmml.neural_network.NeuralOutput;
+import org.dmg.pmml.regression.CategoricalPredictor;
+import org.dmg.pmml.regression.NumericPredictor;
+import org.dmg.pmml.regression.RegressionModel;
+import org.dmg.pmml.regression.RegressionTable;
+import org.dmg.pmml.rule_set.RuleSelectionMethod;
+import org.dmg.pmml.rule_set.RuleSet;
+import org.dmg.pmml.rule_set.SimpleRule;
+import org.dmg.pmml.scorecard.Attribute;
+import org.dmg.pmml.scorecard.Characteristic;
+import org.dmg.pmml.support_vector_machine.SupportVector;
+import org.dmg.pmml.support_vector_machine.SupportVectorMachine;
+import org.dmg.pmml.support_vector_machine.SupportVectorMachineModel;
+import org.dmg.pmml.support_vector_machine.VectorInstance;
+import org.dmg.pmml.tree.ComplexNode;
+import org.jpmml.model.ReflectionUtil;
+
+public interface PMMLAttributes {
+
+<span class="fc" id="L85">	Field AGGREGATE_FUNCTION = ReflectionUtil.getField(Aggregate.class, &quot;function&quot;);</span>
+<span class="fc" id="L86">	Field ARRAY_TYPE = ReflectionUtil.getField(Array.class, &quot;type&quot;);</span>
+<span class="fc" id="L87">	Field ASSOCIATIONRULE_AFFINITY = ReflectionUtil.getField(AssociationRule.class, &quot;affinity&quot;);</span>
+<span class="fc" id="L88">	Field ASSOCIATIONRULE_ANTECEDENT = ReflectionUtil.getField(AssociationRule.class, &quot;antecedent&quot;);</span>
+<span class="fc" id="L89">	Field ASSOCIATIONRULE_CONSEQUENT = ReflectionUtil.getField(AssociationRule.class, &quot;consequent&quot;);</span>
+<span class="fc" id="L90">	Field ASSOCIATIONRULE_LEVERAGE = ReflectionUtil.getField(AssociationRule.class, &quot;leverage&quot;);</span>
+<span class="fc" id="L91">	Field ASSOCIATIONRULE_LIFT = ReflectionUtil.getField(AssociationRule.class, &quot;lift&quot;);</span>
+<span class="fc" id="L92">	Field APPLY_FUNCTION = ReflectionUtil.getField(Apply.class, &quot;function&quot;);</span>
+<span class="fc" id="L93">	Field ATTRIBUTE_PARTIALSCORE = ReflectionUtil.getField(Attribute.class, &quot;partialScore&quot;);</span>
+<span class="fc" id="L94">	Field ATTRIBUTE_REASONCODE = ReflectionUtil.getField(Attribute.class, &quot;reasonCode&quot;);</span>
+<span class="fc" id="L95">	Field BASECUMHAZARDTABLES_MAXTIME = ReflectionUtil.getField(BaseCumHazardTables.class, &quot;maxTime&quot;);</span>
+<span class="fc" id="L96">	Field BASELINESTRATUM_VALUE = ReflectionUtil.getField(BaselineStratum.class, &quot;value&quot;);</span>
+<span class="fc" id="L97">	Field BAYESINPUT_FIELD = ReflectionUtil.getField(BayesInput.class, &quot;field&quot;);</span>
+<span class="fc" id="L98">	Field BAYESOUTPUT_FIELD = ReflectionUtil.getField(BayesOutput.class, &quot;field&quot;);</span>
+<span class="fc" id="L99">	Field CATEGORY_VALUE = ReflectionUtil.getField(Category.class, &quot;value&quot;);</span>
+<span class="fc" id="L100">	Field CATEGORICALPREDICTOR_COEFFICIENT = ReflectionUtil.getField(CategoricalPredictor.class, &quot;coefficient&quot;);</span>
+<span class="fc" id="L101">	Field CATEGORICALPREDICTOR_FIELD = ReflectionUtil.getField(CategoricalPredictor.class, &quot;field&quot;);</span>
+<span class="fc" id="L102">	Field CATEGORICALPREDICTOR_VALUE = ReflectionUtil.getField(CategoricalPredictor.class, &quot;value&quot;);</span>
+<span class="fc" id="L103">	Field CHARACTERISTIC_BASELINESCORE = ReflectionUtil.getField(Characteristic.class, &quot;baselineScore&quot;);</span>
+<span class="fc" id="L104">	Field CLUSTERINGFIELD_FIELD = ReflectionUtil.getField(ClusteringField.class, &quot;field&quot;);</span>
+<span class="fc" id="L105">	Field CONNECTION_FROM = ReflectionUtil.getField(Connection.class, &quot;from&quot;);</span>
+<span class="fc" id="L106">	Field COMPOUNDPREDICATE_BOOLEANOPERATOR = ReflectionUtil.getField(CompoundPredicate.class, &quot;booleanOperator&quot;);</span>
+<span class="fc" id="L107">	Field DATAFIELD_DATATYPE = ReflectionUtil.getField(DataField.class, &quot;dataType&quot;);</span>
+<span class="fc" id="L108">	Field DATAFIELD_OPTYPE = ReflectionUtil.getField(DataField.class, &quot;opType&quot;);</span>
+<span class="fc" id="L109">	Field DERIVEDFIELD_DATATYPE = ReflectionUtil.getField(DerivedField.class, &quot;dataType&quot;);</span>
+<span class="fc" id="L110">	Field DERIVEDFIELD_OPTYPE = ReflectionUtil.getField(DerivedField.class, &quot;opType&quot;);</span>
+<span class="fc" id="L111">	Field DISCRETIZEBIN_BINVALUE = ReflectionUtil.getField(DiscretizeBin.class, &quot;binValue&quot;);</span>
+<span class="fc" id="L112">	Field DISCRETIZEBIN_INTERVAL = ReflectionUtil.getField(DiscretizeBin.class, &quot;interval&quot;);</span>
+<span class="fc" id="L113">	Field FIELDCOLUMNPAIR_COLUMN = ReflectionUtil.getField(FieldColumnPair.class, &quot;column&quot;);</span>
+<span class="fc" id="L114">	Field FIELDCOLUMNPAIR_FIELD = ReflectionUtil.getField(FieldColumnPair.class, &quot;field&quot;);</span>
+<span class="fc" id="L115">	Field FIELDREF_FIELD = ReflectionUtil.getField(FieldRef.class, &quot;field&quot;);</span>
+<span class="fc" id="L116">	Field GENERALREGRESSIONMODEL_CUMULATIVELINKFUNCTION = ReflectionUtil.getField(GeneralRegressionModel.class, &quot;cumulativeLinkFunction&quot;);</span>
+<span class="fc" id="L117">	Field GENERALREGRESSIONMODEL_DISTPARAMETER = ReflectionUtil.getField(GeneralRegressionModel.class, &quot;distParameter&quot;);</span>
+<span class="fc" id="L118">	Field GENERALREGRESSIONMODEL_ENDTIMEVARIABLE = ReflectionUtil.getField(GeneralRegressionModel.class, &quot;endTimeVariable&quot;);</span>
+<span class="fc" id="L119">	Field GENERALREGRESSIONMODEL_LINKFUNCTION = ReflectionUtil.getField(GeneralRegressionModel.class, &quot;linkFunction&quot;);</span>
+<span class="fc" id="L120">	Field GENERALREGRESSIONMODEL_LINKPARAMETER = ReflectionUtil.getField(GeneralRegressionModel.class, &quot;linkParameter&quot;);</span>
+<span class="fc" id="L121">	Field GENERALREGRESSIONMODEL_MODELTYPE = ReflectionUtil.getField(GeneralRegressionModel.class, &quot;modelType&quot;);</span>
+<span class="fc" id="L122">	Field INSTANCEFIELD_FIELD = ReflectionUtil.getField(InstanceField.class, &quot;field&quot;);</span>
+<span class="fc" id="L123">	Field INTERVAL_CLOSURE = ReflectionUtil.getField(Interval.class, &quot;closure&quot;);</span>
+<span class="fc" id="L124">	Field INTERVAL_LEFTMARGIN = ReflectionUtil.getField(Interval.class, &quot;leftMargin&quot;);</span>
+<span class="fc" id="L125">	Field INTERVAL_RIGHTMARGIN = ReflectionUtil.getField(Interval.class, &quot;rightMargin&quot;);</span>
+<span class="fc" id="L126">	Field ITEM_CATEGORY = ReflectionUtil.getField(Item.class, &quot;category&quot;);</span>
+<span class="fc" id="L127">	Field ITEM_ID = ReflectionUtil.getField(Item.class, &quot;id&quot;);</span>
+<span class="fc" id="L128">	Field ITEM_VALUE = ReflectionUtil.getField(Item.class, &quot;value&quot;);</span>
+<span class="fc" id="L129">	Field KNNINPUT_FIELD = ReflectionUtil.getField(KNNInput.class, &quot;field&quot;);</span>
+<span class="fc" id="L130">	Field MAPVALUES_OUTPUTCOLUMN = ReflectionUtil.getField(MapValues.class, &quot;outputColumn&quot;);</span>
+<span class="fc" id="L131">	Field MINKOWSKI_PPARAMETER = ReflectionUtil.getField(Minkowski.class, &quot;pParameter&quot;);</span>
+<span class="fc" id="L132">	Field MININGFIELD_HIGHVALUE = ReflectionUtil.getField(MiningField.class, &quot;highValue&quot;);</span>
+<span class="fc" id="L133">	Field MININGFIELD_INVALIDVALUEREPLACEMENT = ReflectionUtil.getField(MiningField.class, &quot;invalidValueReplacement&quot;);</span>
+<span class="fc" id="L134">	Field MININGFIELD_LOWVALUE = ReflectionUtil.getField(MiningField.class, &quot;lowValue&quot;);</span>
+<span class="fc" id="L135">	Field MININGFIELD_MISSINGVALUEREPLACEMENT = ReflectionUtil.getField(MiningField.class, &quot;missingValueReplacement&quot;);</span>
+<span class="fc" id="L136">	Field MININGFIELD_NAME = ReflectionUtil.getField(MiningField.class, &quot;name&quot;);</span>
+<span class="fc" id="L137">	Field NEARESTNEIGHBORMODEL_INSTANCEIDVARIABLE = ReflectionUtil.getField(NearestNeighborModel.class, &quot;instanceIdVariable&quot;);</span>
+<span class="fc" id="L138">	Field NEARESTNEIGHBORMODEL_NUMBEROFNEIGHBORS = ReflectionUtil.getField(NearestNeighborModel.class, &quot;numberOfNeighbors&quot;);</span>
+<span class="fc" id="L139">	Field NEURALNETWORK_ACTIVATIONFUNCTION = ReflectionUtil.getField(NeuralNetwork.class, &quot;activationFunction&quot;);</span>
+<span class="fc" id="L140">	Field NEURALNETWORK_THRESHOLD = ReflectionUtil.getField(NeuralNetwork.class, &quot;threshold&quot;);</span>
+<span class="fc" id="L141">	Field NEURALOUTPUT_OUTPUTNEURON = ReflectionUtil.getField(NeuralOutput.class, &quot;outputNeuron&quot;);</span>
+<span class="fc" id="L142">	Field NODE_DEFAULTCHILD = ReflectionUtil.getField(ComplexNode.class, &quot;defaultChild&quot;);</span>
+<span class="fc" id="L143">	Field NODE_SCORE = ReflectionUtil.getField(ComplexNode.class, &quot;score&quot;);</span>
+<span class="fc" id="L144">	Field NORMCONTINUOUS_MAPMISSINGTO = ReflectionUtil.getField(NormContinuous.class, &quot;mapMissingTo&quot;);</span>
+<span class="fc" id="L145">	Field NORMDISCRETE_FIELD = ReflectionUtil.getField(NormDiscrete.class, &quot;field&quot;);</span>
+<span class="fc" id="L146">	Field NORMDISCRETE_VALUE = ReflectionUtil.getField(NormDiscrete.class, &quot;value&quot;);</span>
+<span class="fc" id="L147">	Field NUMERICPREDICTOR_FIELD = ReflectionUtil.getField(NumericPredictor.class, &quot;field&quot;);</span>
+<span class="fc" id="L148">	Field OUTPUTFIELD_ISMULTIVALUED = ReflectionUtil.getField(OutputField.class, &quot;isMultiValued&quot;);</span>
+<span class="fc" id="L149">	Field OUTPUTFIELD_NAME = ReflectionUtil.getField(OutputField.class, &quot;name&quot;);</span>
+<span class="fc" id="L150">	Field OUTPUTFIELD_RANK = ReflectionUtil.getField(OutputField.class, &quot;rank&quot;);</span>
+<span class="fc" id="L151">	Field OUTPUTFIELD_REPORTFIELD = ReflectionUtil.getField(OutputField.class, &quot;reportField&quot;);</span>
+<span class="fc" id="L152">	Field OUTPUTFIELD_SEGMENTID = ReflectionUtil.getField(OutputField.class, &quot;segmentId&quot;);</span>
+<span class="fc" id="L153">	Field OUTPUTFIELD_VALUE = ReflectionUtil.getField(OutputField.class, &quot;value&quot;);</span>
+<span class="fc" id="L154">	Field PAIRCOUNTS_VALUE = ReflectionUtil.getField(PairCounts.class, &quot;value&quot;);</span>
+<span class="fc" id="L155">	Field PARAMETERFIELD_DATATYPE = ReflectionUtil.getField(ParameterField.class, &quot;dataType&quot;);</span>
+<span class="fc" id="L156">	Field PARAMETERFIELD_NAME = ReflectionUtil.getField(ParameterField.class, &quot;name&quot;);</span>
+<span class="fc" id="L157">	Field PARAMETERFIELD_OPTYPE = ReflectionUtil.getField(ParameterField.class, &quot;opType&quot;);</span>
+<span class="fc" id="L158">	Field PPCELL_FIELD = ReflectionUtil.getField(PPCell.class, &quot;field&quot;);</span>
+<span class="fc" id="L159">	Field PPCELL_VALUE = ReflectionUtil.getField(PPCell.class, &quot;value&quot;);</span>
+<span class="fc" id="L160">	Field REGRESSIONMODEL_TARGETFIELDNAME = ReflectionUtil.getField(RegressionModel.class, &quot;targetField&quot;);</span>
+<span class="fc" id="L161">	Field REGRESSIONTABLE_TARGETCATEGORY = ReflectionUtil.getField(RegressionTable.class, &quot;targetCategory&quot;);</span>
+<span class="fc" id="L162">	Field RULESET_DEFAULTCONFIDENCE = ReflectionUtil.getField(RuleSet.class, &quot;defaultConfidence&quot;);</span>
+<span class="fc" id="L163">	Field RULESET_DEFAULTSCORE = ReflectionUtil.getField(RuleSet.class, &quot;defaultScore&quot;);</span>
+<span class="fc" id="L164">	Field RULESELECTIONMETHOD_CRITERION = ReflectionUtil.getField(RuleSelectionMethod.class, &quot;criterion&quot;);</span>
+<span class="fc" id="L165">	Field SCOREDISTRIBUTION_PROBABILITY = ReflectionUtil.getField(ScoreDistribution.class, &quot;probability&quot;);</span>
+<span class="fc" id="L166">	Field SCOREDISTRIBUTION_VALUE = ReflectionUtil.getField(ScoreDistribution.class, &quot;value&quot;);</span>
+<span class="fc" id="L167">	Field SEGMENTATION_MISSINGTHRESHOLD = ReflectionUtil.getField(Segmentation.class, &quot;missingThreshold&quot;);</span>
+<span class="fc" id="L168">	Field SEGMENTATION_MULTIPLEMODELMETHOD = ReflectionUtil.getField(Segmentation.class, &quot;multipleModelMethod&quot;);</span>
+<span class="fc" id="L169">	Field SIMPLEPREDICATE_FIELD = ReflectionUtil.getField(SimplePredicate.class, &quot;field&quot;);</span>
+<span class="fc" id="L170">	Field SIMPLEPREDICATE_OPERATOR = ReflectionUtil.getField(SimplePredicate.class, &quot;operator&quot;);</span>
+<span class="fc" id="L171">	Field SIMPLEPREDICATE_VALUE = ReflectionUtil.getField(SimplePredicate.class, &quot;value&quot;);</span>
+<span class="fc" id="L172">	Field SIMPLERULE_SCORE = ReflectionUtil.getField(SimpleRule.class, &quot;score&quot;);</span>
+<span class="fc" id="L173">	Field SIMPLESETPREDICATE_BOOLEANOPERATOR = ReflectionUtil.getField(SimpleSetPredicate.class, &quot;booleanOperator&quot;);</span>
+<span class="fc" id="L174">	Field SIMPLESETPREDICATE_FIELD = ReflectionUtil.getField(SimpleSetPredicate.class, &quot;field&quot;);</span>
+<span class="fc" id="L175">	Field SUPPORTVECTOR_VECTORID = ReflectionUtil.getField(SupportVector.class, &quot;vectorId&quot;);</span>
+<span class="fc" id="L176">	Field SUPPORTVECTORMACHINE_ALTERNATETARGETCATEGORY = ReflectionUtil.getField(SupportVectorMachine.class, &quot;alternateTargetCategory&quot;);</span>
+<span class="fc" id="L177">	Field SUPPORTVECTORMACHINE_TARGETCATEGORY = ReflectionUtil.getField(SupportVectorMachine.class, &quot;targetCategory&quot;);</span>
+<span class="fc" id="L178">	Field SUPPORTVECTORMACHINEMODEL_MAXWINS = ReflectionUtil.getField(SupportVectorMachineModel.class, &quot;maxWins&quot;);</span>
+<span class="fc" id="L179">	Field SUPPORTVECTORMACHINEMODEL_CLASSIFICATIONMETHOD = ReflectionUtil.getField(SupportVectorMachineModel.class, &quot;classificationMethod&quot;);</span>
+<span class="fc" id="L180">	Field TARGETVALUE_DEFAULTVALUE = ReflectionUtil.getField(TargetValue.class, &quot;defaultValue&quot;);</span>
+<span class="fc" id="L181">	Field TARGETVALUE_PRIORPROBABILITY = ReflectionUtil.getField(TargetValue.class, &quot;priorProbability&quot;);</span>
+<span class="fc" id="L182">	Field TARGETVALUE_VALUE = ReflectionUtil.getField(TargetValue.class, &quot;value&quot;);</span>
+<span class="fc" id="L183">	Field TARGETVALUECOUNT_VALUE = ReflectionUtil.getField(TargetValueCount.class, &quot;value&quot;);</span>
+<span class="fc" id="L184">	Field TARGETVALUESTAT_VALUE = ReflectionUtil.getField(TargetValueStat.class, &quot;value&quot;);</span>
+<span class="fc" id="L185">	Field TEXTINDEX_MAXLEVENSHTEINDISTANCE = ReflectionUtil.getField(TextIndex.class, &quot;maxLevenshteinDistance&quot;);</span>
+<span class="fc" id="L186">	Field TEXTINDEX_TEXTFIELD = ReflectionUtil.getField(TextIndex.class, &quot;textField&quot;);</span>
+<span class="fc" id="L187">	Field TEXTINDEX_TOKENIZE = ReflectionUtil.getField(TextIndex.class, &quot;tokenize&quot;);</span>
+<span class="fc" id="L188">	Field TEXTINDEXNORMALIZATION_MAXLEVENSHTEINDISTANCE = ReflectionUtil.getField(TextIndexNormalization.class, &quot;maxLevenshteinDistance&quot;);</span>
+<span class="fc" id="L189">	Field TEXTINDEXNORMALIZATION_TOKENIZE = ReflectionUtil.getField(TextIndexNormalization.class, &quot;tokenize&quot;);</span>
+<span class="fc" id="L190">	Field VALUE_VALUE = ReflectionUtil.getField(Value.class, &quot;value&quot;);</span>
+<span class="fc" id="L191">	Field VECTORINSTANCE_ID = ReflectionUtil.getField(VectorInstance.class, &quot;id&quot;);</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.0.201801022044</span></div></body></html>

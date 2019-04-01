@@ -1,0 +1,300 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>ProbabilityAggregator.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">PMML class model evaluator code coverage</a> &gt; <a href="index.source.html" class="el_package">org.jpmml.evaluator</a> &gt; <span class="el_source">ProbabilityAggregator.java</span></div><h1>ProbabilityAggregator.java</h1><pre class="source lang-java linenums">/*
+ * Copyright (c) 2014 Villu Ruusmann
+ *
+ * This file is part of JPMML-Evaluator
+ *
+ * JPMML-Evaluator is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Affero General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * JPMML-Evaluator is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Affero General Public License for more details.
+ *
+ * You should have received a copy of the GNU Affero General Public License
+ * along with JPMML-Evaluator.  If not, see &lt;http://www.gnu.org/licenses/&gt;.
+ */
+package org.jpmml.evaluator;
+
+import java.util.AbstractMap;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+
+import com.google.common.base.Function;
+
+abstract
+public class ProbabilityAggregator&lt;V extends Number&gt; extends KeyValueAggregator&lt;String, V&gt; {
+
+<span class="fc" id="L33">	private List&lt;HasProbability&gt; hasProbabilities = null;</span>
+
+<span class="fc" id="L35">	private int size = 0;</span>
+
+<span class="fc" id="L37">	private Vector&lt;V&gt; weights = null;</span>
+
+
+	public ProbabilityAggregator(int capacity){
+<span class="fc" id="L41">		this(capacity, null);</span>
+<span class="fc" id="L42">	}</span>
+
+	public ProbabilityAggregator(int capacity, Vector&lt;V&gt; weights){
+<span class="fc" id="L45">		super(capacity);</span>
+
+<span class="fc bfc" id="L47" title="All 2 branches covered.">		if(capacity &gt; 0){</span>
+<span class="fc" id="L48">			this.hasProbabilities = new ArrayList&lt;&gt;(capacity);</span>
+		}
+
+<span class="fc" id="L51">		this.weights = weights;</span>
+<span class="fc" id="L52">	}</span>
+
+	public void add(HasProbability hasProbability){
+
+<span class="pc bpc" id="L56" title="1 of 2 branches missed.">		if(this.weights != null){</span>
+<span class="nc" id="L57">			throw new IllegalStateException();</span>
+		} // End if
+
+<span class="fc bfc" id="L60" title="All 2 branches covered.">		if(this.hasProbabilities != null){</span>
+<span class="fc" id="L61">			this.hasProbabilities.add(hasProbability);</span>
+		}
+
+<span class="fc" id="L64">		Set&lt;String&gt; categories = hasProbability.getCategories();</span>
+<span class="fc bfc" id="L65" title="All 2 branches covered.">		for(String category : categories){</span>
+<span class="fc" id="L66">			Double probability = hasProbability.getProbability(category);</span>
+
+<span class="fc" id="L68">			add(category, probability);</span>
+<span class="fc" id="L69">		}</span>
+
+<span class="fc" id="L71">		this.size++;</span>
+<span class="fc" id="L72">	}</span>
+
+	public void add(HasProbability hasProbability, double weight){
+
+<span class="pc bpc" id="L76" title="1 of 2 branches missed.">		if(this.weights == null){</span>
+<span class="nc" id="L77">			throw new IllegalStateException();</span>
+		} // End if
+
+<span class="pc bpc" id="L80" title="1 of 2 branches missed.">		if(weight &lt; 0d){</span>
+<span class="nc" id="L81">			throw new IllegalArgumentException();</span>
+		} // End if
+
+<span class="pc bpc" id="L84" title="1 of 2 branches missed.">		if(this.hasProbabilities != null){</span>
+<span class="nc" id="L85">			this.hasProbabilities.add(hasProbability);</span>
+		}
+
+<span class="fc" id="L88">		Set&lt;String&gt; categories = hasProbability.getCategories();</span>
+<span class="fc bfc" id="L89" title="All 2 branches covered.">		for(String category : categories){</span>
+<span class="fc" id="L90">			Double probability = hasProbability.getProbability(category);</span>
+
+<span class="fc" id="L92">			add(category, weight, probability);</span>
+<span class="fc" id="L93">		}</span>
+
+<span class="fc" id="L95">		this.size++;</span>
+
+<span class="fc" id="L97">		this.weights.add(weight);</span>
+<span class="fc" id="L98">	}</span>
+
+	public ValueMap&lt;String, V&gt; averageMap(){
+
+<span class="pc bpc" id="L102" title="1 of 2 branches missed.">		if(this.weights != null){</span>
+<span class="nc" id="L103">			throw new IllegalStateException();</span>
+		}
+
+<span class="fc" id="L106">		Function&lt;Vector&lt;V&gt;, Value&lt;V&gt;&gt; function = new Function&lt;Vector&lt;V&gt;, Value&lt;V&gt;&gt;(){</span>
+
+<span class="fc" id="L108">			private int size = ProbabilityAggregator.this.size;</span>
+
+
+			@Override
+			public Value&lt;V&gt; apply(Vector&lt;V&gt; values){
+
+<span class="pc bpc" id="L114" title="1 of 2 branches missed.">				if(this.size == 0){</span>
+<span class="nc" id="L115">					throw new UndefinedResultException();</span>
+				}
+
+<span class="fc" id="L118">				return (values.sum()).divide(this.size);</span>
+			}
+		};
+
+<span class="fc" id="L122">		return new ValueMap&lt;&gt;(asTransformedMap(function));</span>
+	}
+
+	public ValueMap&lt;String, V&gt; weightedAverageMap(){
+
+<span class="pc bpc" id="L127" title="1 of 2 branches missed.">		if(this.weights == null){</span>
+<span class="nc" id="L128">			throw new IllegalStateException();</span>
+		}
+
+<span class="fc" id="L131">		Function&lt;Vector&lt;V&gt;, Value&lt;V&gt;&gt; function = new Function&lt;Vector&lt;V&gt;, Value&lt;V&gt;&gt;(){</span>
+
+<span class="fc" id="L133">			private Value&lt;V&gt; weightSum = ProbabilityAggregator.this.weights.sum();</span>
+
+
+			@Override
+			public Value&lt;V&gt; apply(Vector&lt;V&gt; values){
+
+<span class="pc bpc" id="L139" title="1 of 2 branches missed.">				if(this.weightSum.equals(0d)){</span>
+<span class="nc" id="L140">					throw new UndefinedResultException();</span>
+				}
+
+<span class="fc" id="L143">				return (values.sum()).divide(this.weightSum);</span>
+			}
+		};
+
+<span class="fc" id="L147">		return new ValueMap&lt;&gt;(asTransformedMap(function));</span>
+	}
+
+	public ValueMap&lt;String, V&gt; maxMap(Collection&lt;String&gt; categories){
+
+<span class="pc bpc" id="L152" title="1 of 2 branches missed.">		if(this.hasProbabilities == null){</span>
+<span class="nc" id="L153">			throw new IllegalStateException();</span>
+		} // End if
+
+<span class="pc bpc" id="L156" title="1 of 2 branches missed.">		if(this.weights != null){</span>
+<span class="nc" id="L157">			throw new IllegalStateException();</span>
+		}
+
+<span class="fc" id="L160">		Map&lt;String, Value&lt;V&gt;&gt; maxMap = asTransformedMap(Vector::max);</span>
+
+<span class="fc" id="L162">		Map.Entry&lt;String, Value&lt;V&gt;&gt; winnerEntry = getWinner(maxMap, categories);</span>
+<span class="fc bfc" id="L163" title="All 2 branches covered.">		if(winnerEntry == null){</span>
+<span class="fc" id="L164">			return new ValueMap&lt;&gt;();</span>
+		}
+
+<span class="fc" id="L167">		String category = winnerEntry.getKey();</span>
+<span class="fc" id="L168">		Value&lt;V&gt; maxProbability = winnerEntry.getValue();</span>
+
+<span class="fc" id="L170">		List&lt;HasProbability&gt; contributors = new ArrayList&lt;&gt;();</span>
+
+<span class="fc" id="L172">		Vector&lt;V&gt; values = get(category);</span>
+
+<span class="fc bfc" id="L174" title="All 2 branches covered.">		for(int i = 0, max = values.size(); i &lt; max; i++){</span>
+<span class="fc" id="L175">			Value&lt;V&gt; probability = values.get(i);</span>
+
+<span class="fc bfc" id="L177" title="All 2 branches covered.">			if((maxProbability).compareTo(probability) == 0){</span>
+<span class="fc" id="L178">				HasProbability contributor = this.hasProbabilities.get(i);</span>
+
+<span class="fc" id="L180">				contributors.add(contributor);</span>
+			}
+		}
+
+<span class="fc" id="L184">		return averageMap(contributors);</span>
+	}
+
+	public ValueMap&lt;String, V&gt; medianMap(Collection&lt;String&gt; categories){
+
+<span class="pc bpc" id="L189" title="1 of 2 branches missed.">		if(this.hasProbabilities == null){</span>
+<span class="nc" id="L190">			throw new IllegalStateException();</span>
+		} // End if
+
+<span class="pc bpc" id="L193" title="1 of 2 branches missed.">		if(this.weights != null){</span>
+<span class="nc" id="L194">			throw new IllegalStateException();</span>
+		}
+
+<span class="fc" id="L197">		Map&lt;String, Value&lt;V&gt;&gt; medianMap = asTransformedMap(Vector::median);</span>
+
+<span class="fc" id="L199">		Map.Entry&lt;String, Value&lt;V&gt;&gt; winnerEntry = getWinner(medianMap, categories);</span>
+<span class="fc bfc" id="L200" title="All 2 branches covered.">		if(winnerEntry == null){</span>
+<span class="fc" id="L201">			return new ValueMap&lt;&gt;();</span>
+		}
+
+<span class="fc" id="L204">		String category = winnerEntry.getKey();</span>
+<span class="fc" id="L205">		Value&lt;V&gt; medianProbability = winnerEntry.getValue();</span>
+
+<span class="fc" id="L207">		List&lt;HasProbability&gt; contributors = new ArrayList&lt;&gt;();</span>
+
+<span class="fc" id="L209">		double minDifference = Double.MAX_VALUE;</span>
+
+<span class="fc" id="L211">		Vector&lt;V&gt; values = get(category);</span>
+
+<span class="fc bfc" id="L213" title="All 2 branches covered.">		for(int i = 0, max = values.size(); i &lt; max; i++){</span>
+<span class="fc" id="L214">			Value&lt;V&gt; probability = values.get(i);</span>
+
+			// Choose models whose probability is closest to the calculated median probability.
+			// If the number of models is odd (the calculated median probability equals that of the middle model),
+			// then all the chosen models will have the same probability (ie. difference == 0).
+			// If the number of models is even (the calculated median probability equals the average of two middle-most models),
+			// then some of the chosen models will have lower probabilies (ie. difference &gt; 0), whereas the others will have higher probabilities (ie. difference &lt; 0).
+<span class="fc" id="L221">			double difference = Math.abs(medianProbability.doubleValue() - probability.doubleValue());</span>
+
+<span class="fc bfc" id="L223" title="All 2 branches covered.">			if(difference &lt; minDifference){</span>
+<span class="fc" id="L224">				contributors.clear();</span>
+
+<span class="fc" id="L226">				minDifference = difference;</span>
+			} // End if
+
+<span class="pc bpc" id="L229" title="1 of 2 branches missed.">			if(difference &lt;= minDifference){</span>
+<span class="fc" id="L230">				HasProbability contributor = this.hasProbabilities.get(i);</span>
+
+<span class="fc" id="L232">				contributors.add(contributor);</span>
+			}
+		}
+
+<span class="fc" id="L236">		return averageMap(contributors);</span>
+	}
+
+	private ValueMap&lt;String, V&gt; averageMap(List&lt;HasProbability&gt; hasProbabilities){
+
+<span class="fc bfc" id="L241" title="All 2 branches covered.">		if(hasProbabilities.size() == 1){</span>
+<span class="fc" id="L242">			HasProbability hasProbability = hasProbabilities.get(0);</span>
+
+<span class="fc" id="L244">			ValueFactory&lt;V&gt; valueFactory = getValueFactory();</span>
+
+<span class="fc" id="L246">			ValueMap&lt;String, V&gt; result = new ValueMap&lt;&gt;();</span>
+
+<span class="fc" id="L248">			Set&lt;String&gt; categories = hasProbability.getCategories();</span>
+<span class="fc bfc" id="L249" title="All 2 branches covered.">			for(String category : categories){</span>
+<span class="fc" id="L250">				Double probability = hasProbability.getProbability(category);</span>
+
+<span class="fc" id="L252">				Value&lt;V&gt; value = valueFactory.newValue(probability);</span>
+
+<span class="fc" id="L254">				result.put(category, value);</span>
+<span class="fc" id="L255">			}</span>
+
+<span class="fc" id="L257">			return result;</span>
+		} else
+
+		{
+<span class="fc" id="L261">			ProbabilityAggregator&lt;V&gt; aggregator = new ProbabilityAggregator&lt;V&gt;(0){</span>
+
+				@Override
+				public ValueFactory&lt;V&gt; getValueFactory(){
+<span class="fc" id="L265">					return ProbabilityAggregator.this.getValueFactory();</span>
+				}
+			};
+
+<span class="fc bfc" id="L269" title="All 2 branches covered.">			for(HasProbability hasProbability : hasProbabilities){</span>
+<span class="fc" id="L270">				aggregator.add(hasProbability);</span>
+<span class="fc" id="L271">			}</span>
+
+<span class="fc" id="L273">			return aggregator.averageMap();</span>
+		}
+	}
+
+	static
+	private &lt;V extends Number&gt; Map.Entry&lt;String, Value&lt;V&gt;&gt; getWinner(Map&lt;String, Value&lt;V&gt;&gt; values, Collection&lt;String&gt; categories){
+<span class="fc" id="L279">		Map.Entry&lt;String, Value&lt;V&gt;&gt; maxEntry = null;</span>
+
+<span class="pc bpc" id="L281" title="1 of 2 branches missed.">		if(categories == null){</span>
+<span class="nc" id="L282">			categories = values.keySet();</span>
+		}
+
+<span class="fc bfc" id="L285" title="All 2 branches covered.">		for(String category : categories){</span>
+<span class="fc" id="L286">			Value&lt;V&gt; value = values.get(category);</span>
+
+<span class="fc bfc" id="L288" title="All 2 branches covered.">			if(value == null){</span>
+<span class="fc" id="L289">				continue;</span>
+			} // End if
+
+<span class="fc bfc" id="L292" title="All 4 branches covered.">			if(maxEntry == null || (maxEntry.getValue()).compareTo(value) &lt; 0){</span>
+<span class="fc" id="L293">				maxEntry = new AbstractMap.SimpleEntry&lt;&gt;(category, value);</span>
+			}
+<span class="fc" id="L295">		}</span>
+
+<span class="fc" id="L297">		return maxEntry;</span>
+	}
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.0.201801022044</span></div></body></html>

@@ -1,0 +1,38 @@
+GROUP,PACKAGE,CLASS,INSTRUCTION_MISSED,INSTRUCTION_COVERED,BRANCH_MISSED,BRANCH_COVERED,LINE_MISSED,LINE_COVERED,COMPLEXITY_MISSED,COMPLEXITY_COVERED,METHOD_MISSED,METHOD_COVERED
+JPMML evaluator extensions,org.jpmml.evaluator.general_regression,RichBaseCumHazardTables,90,0,6,0,26,0,9,0,6,0
+JPMML evaluator extensions,org.jpmml.evaluator,JavaValuePredicate.IsMissing,7,0,0,0,3,0,2,0,2,0
+JPMML evaluator extensions,org.jpmml.evaluator,JavaComparisonPredicate.GreaterOrEqual,12,0,2,0,3,0,3,0,2,0
+JPMML evaluator extensions,org.jpmml.evaluator,RichComplexArray,12,39,0,0,3,12,3,5,3,5
+JPMML evaluator extensions,org.jpmml.evaluator,JavaValuePredicate,14,0,0,0,4,0,2,0,2,0
+JPMML evaluator extensions,org.jpmml.evaluator,JavaEqualityPredicate.NotEqual,12,0,2,0,3,0,3,0,2,0
+JPMML evaluator extensions,org.jpmml.evaluator,RichDataField,24,86,4,7,5,29,5,6,1,4
+JPMML evaluator extensions,org.jpmml.evaluator,DefaultVisitorBattery,37,0,0,0,8,0,1,0,1,0
+JPMML evaluator extensions,org.jpmml.evaluator,JavaComparisonPredicate.GreaterThan,12,0,2,0,3,0,3,0,2,0
+JPMML evaluator extensions,org.jpmml.evaluator,JavaValuePredicate.IsNotMissing,11,0,2,0,3,0,3,0,2,0
+JPMML evaluator extensions,org.jpmml.evaluator,JavaComparisonPredicate.LessThan,12,0,2,0,3,0,3,0,2,0
+JPMML evaluator extensions,org.jpmml.evaluator,JavaSimplePredicate,16,0,0,0,7,0,3,0,3,0
+JPMML evaluator extensions,org.jpmml.evaluator,JavaEqualityPredicate.Equal,8,0,0,0,3,0,2,0,2,0
+JPMML evaluator extensions,org.jpmml.evaluator,JavaComparisonPredicate.LessOrEqual,12,0,2,0,3,0,3,0,2,0
+JPMML evaluator extensions,org.jpmml.evaluator,JavaEqualityPredicate,34,0,2,0,11,0,5,0,4,0
+JPMML evaluator extensions,org.jpmml.evaluator,JavaComparisonPredicate,34,0,2,0,11,0,5,0,4,0
+JPMML evaluator extensions,org.jpmml.evaluator.naive_bayes,RichBayesInput,101,0,8,0,29,0,10,0,6,0
+JPMML evaluator extensions,org.jpmml.evaluator.functions,PercentileFunction,15,73,2,4,1,16,2,5,0,4
+JPMML evaluator extensions,org.jpmml.evaluator.functions,StandardDeviationFunction,0,73,0,4,0,18,0,6,0,4
+JPMML evaluator extensions,org.jpmml.evaluator.functions,MeanFunction,0,54,0,2,0,14,0,5,0,4
+JPMML evaluator extensions,org.jpmml.evaluator.visitors,MiningFieldInterner,52,0,10,0,12,0,8,0,3,0
+JPMML evaluator extensions,org.jpmml.evaluator.visitors,ValueOptimizer.Mode,0,24,0,0,0,3,0,1,0,1
+JPMML evaluator extensions,org.jpmml.evaluator.visitors,ElementOptimizerBattery,7,0,0,0,3,0,1,0,1,0
+JPMML evaluator extensions,org.jpmml.evaluator.visitors,ScoreDistributionInterner,2,44,2,6,1,9,2,5,0,3
+JPMML evaluator extensions,org.jpmml.evaluator.visitors,ElementHashMap,0,23,0,2,0,7,0,3,0,2
+JPMML evaluator extensions,org.jpmml.evaluator.visitors,ValueOptimizer.new ThreadLocal() {...},2,3,0,0,1,1,1,1,1,1
+JPMML evaluator extensions,org.jpmml.evaluator.visitors,ValueOptimizer,321,332,54,36,83,100,51,26,15,17
+JPMML evaluator extensions,org.jpmml.evaluator.visitors,ScoreDistributionInterner.new ElementHashMap() {...},0,35,0,0,0,3,0,2,0,2
+JPMML evaluator extensions,org.jpmml.evaluator.visitors,MiningFieldInterner.new ElementHashMap() {...},19,0,0,0,3,0,2,0,2,0
+JPMML evaluator extensions,org.jpmml.evaluator.visitors,PredicateInterner,4,111,3,9,2,27,3,12,0,9
+JPMML evaluator extensions,org.jpmml.evaluator.visitors,PredicateInterner.new ElementHashMap() {...},0,8,0,0,0,2,0,2,0,2
+JPMML evaluator extensions,org.jpmml.evaluator.visitors,PredicateInterner.new ElementHashMap() {...},0,8,0,0,0,2,0,2,0,2
+JPMML evaluator extensions,org.jpmml.evaluator.visitors,PredicateInterner.new ElementHashMap() {...},0,32,0,0,0,4,0,2,0,2
+JPMML evaluator extensions,org.jpmml.evaluator.visitors,PredicateInterner.new ElementHashMap() {...},0,29,0,0,0,3,0,2,0,2
+JPMML evaluator extensions,org.jpmml.evaluator.visitors,ElementInternerBattery,15,0,0,0,5,0,1,0,1,0
+JPMML evaluator extensions,org.jpmml.evaluator.visitors,ElementKey,2,41,1,1,1,13,1,6,0,6
+JPMML evaluator extensions,org.jpmml.evaluator.visitors,NodeResolver,5,60,2,8,1,16,3,6,1,3

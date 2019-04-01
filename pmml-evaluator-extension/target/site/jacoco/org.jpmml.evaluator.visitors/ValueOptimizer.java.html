@@ -1,0 +1,512 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>ValueOptimizer.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">JPMML evaluator extensions</a> &gt; <a href="index.source.html" class="el_package">org.jpmml.evaluator.visitors</a> &gt; <span class="el_source">ValueOptimizer.java</span></div><h1>ValueOptimizer.java</h1><pre class="source lang-java linenums">/*
+ * Copyright (c) 2019 Villu Ruusmann
+ *
+ * This file is part of JPMML-Evaluator
+ *
+ * JPMML-Evaluator is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Affero General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * JPMML-Evaluator is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Affero General Public License for more details.
+ *
+ * You should have received a copy of the GNU Affero General Public License
+ * along with JPMML-Evaluator.  If not, see &lt;http://www.gnu.org/licenses/&gt;.
+ */
+package org.jpmml.evaluator.visitors;
+
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.ListIterator;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
+
+import org.dmg.pmml.Array;
+import org.dmg.pmml.Constant;
+import org.dmg.pmml.DataDictionary;
+import org.dmg.pmml.DataField;
+import org.dmg.pmml.DataType;
+import org.dmg.pmml.Discretize;
+import org.dmg.pmml.DiscretizeBin;
+import org.dmg.pmml.Field;
+import org.dmg.pmml.FieldName;
+import org.dmg.pmml.HasValue;
+import org.dmg.pmml.LocalTransformations;
+import org.dmg.pmml.MiningField;
+import org.dmg.pmml.Model;
+import org.dmg.pmml.NormDiscrete;
+import org.dmg.pmml.PMMLObject;
+import org.dmg.pmml.SimplePredicate;
+import org.dmg.pmml.SimpleSetPredicate;
+import org.dmg.pmml.TargetValue;
+import org.dmg.pmml.TransformationDictionary;
+import org.dmg.pmml.Value;
+import org.dmg.pmml.Visitable;
+import org.dmg.pmml.VisitorAction;
+import org.dmg.pmml.baseline.FieldValue;
+import org.dmg.pmml.baseline.FieldValueCount;
+import org.dmg.pmml.general_regression.BaseCumHazardTables;
+import org.dmg.pmml.general_regression.BaselineStratum;
+import org.dmg.pmml.general_regression.Category;
+import org.dmg.pmml.general_regression.GeneralRegressionModel;
+import org.dmg.pmml.general_regression.PPCell;
+import org.dmg.pmml.naive_bayes.BayesInput;
+import org.dmg.pmml.naive_bayes.BayesInputs;
+import org.dmg.pmml.naive_bayes.PairCounts;
+import org.dmg.pmml.naive_bayes.TargetValueCount;
+import org.dmg.pmml.regression.CategoricalPredictor;
+import org.jpmml.evaluator.ArrayUtil;
+import org.jpmml.evaluator.MissingAttributeException;
+import org.jpmml.evaluator.MissingElementException;
+import org.jpmml.evaluator.PMMLAttributes;
+import org.jpmml.evaluator.PMMLElements;
+import org.jpmml.evaluator.RichComplexArray;
+import org.jpmml.evaluator.RichDataField;
+import org.jpmml.evaluator.TypeCheckException;
+import org.jpmml.evaluator.TypeUtil;
+import org.jpmml.evaluator.XPathUtil;
+import org.jpmml.evaluator.general_regression.RichBaseCumHazardTables;
+import org.jpmml.evaluator.naive_bayes.RichBayesInput;
+import org.jpmml.model.visitors.FieldResolver;
+
+public class ValueOptimizer extends FieldResolver {
+
+<span class="fc" id="L80">	private Mode mode = null;</span>
+
+<span class="fc" id="L82">	private Map&lt;FieldName, DataType&gt; dataTypes = new HashMap&lt;&gt;();</span>
+
+
+	public ValueOptimizer(){
+<span class="nc" id="L86">		this(ValueOptimizer.MODE_PROVIDER.get());</span>
+<span class="nc" id="L87">	}</span>
+
+<span class="fc" id="L89">	public ValueOptimizer(Mode mode){</span>
+<span class="fc" id="L90">		setMode(mode);</span>
+<span class="fc" id="L91">	}</span>
+
+	@Override
+	public void applyTo(Visitable visitable){
+<span class="fc" id="L95">		this.dataTypes.clear();</span>
+
+<span class="fc" id="L97">		super.applyTo(visitable);</span>
+<span class="fc" id="L98">	}</span>
+
+	@Override
+	public PMMLObject popParent(){
+<span class="fc" id="L102">		PMMLObject parent = super.popParent();</span>
+
+<span class="fc bfc" id="L104" title="All 2 branches covered.">		if(parent instanceof Model){</span>
+<span class="fc" id="L105">			this.dataTypes.clear();</span>
+		} else
+
+<span class="fc bfc" id="L108" title="All 2 branches covered.">		if(parent instanceof TransformationDictionary){</span>
+<span class="fc" id="L109">			this.dataTypes.clear();</span>
+		} else
+
+<span class="pc bpc" id="L112" title="1 of 2 branches missed.">		if(parent instanceof LocalTransformations){</span>
+<span class="nc" id="L113">			this.dataTypes.clear();</span>
+		}
+
+<span class="fc" id="L116">		return parent;</span>
+	}
+
+	@Override
+	public VisitorAction visit(BaselineStratum baselineStartum){
+<span class="nc" id="L121">		return super.visit(baselineStartum);</span>
+	}
+
+	@Override
+	public VisitorAction visit(BayesInputs bayesInputs){
+
+<span class="nc bnc" id="L127" title="All 2 branches missed.">		if(bayesInputs.hasBayesInputs()){</span>
+<span class="nc" id="L128">			List&lt;BayesInput&gt; content = bayesInputs.getBayesInputs();</span>
+
+<span class="nc bnc" id="L130" title="All 2 branches missed.">			for(ListIterator&lt;BayesInput&gt; it = content.listIterator(); it.hasNext(); ){</span>
+<span class="nc" id="L131">				BayesInput bayesInput = it.next();</span>
+
+<span class="nc" id="L133">				FieldName name = bayesInput.getField();</span>
+<span class="nc bnc" id="L134" title="All 2 branches missed.">				if(name == null){</span>
+<span class="nc" id="L135">					throw new MissingAttributeException(bayesInput, PMMLAttributes.BAYESINPUT_FIELD);</span>
+				}
+
+<span class="nc" id="L138">				DataType dataType = getDataType(name);</span>
+<span class="nc bnc" id="L139" title="All 2 branches missed.">				if(dataType != null){</span>
+<span class="nc" id="L140">					it.set(new RichBayesInput(dataType, bayesInput));</span>
+				}
+<span class="nc" id="L142">			}</span>
+		}
+
+<span class="nc" id="L145">		return super.visit(bayesInputs);</span>
+	}
+
+	@Override
+	public VisitorAction visit(CategoricalPredictor categoricalPredictor){
+<span class="fc" id="L150">		FieldName name = categoricalPredictor.getField();</span>
+<span class="pc bpc" id="L151" title="1 of 2 branches missed.">		if(name == null){</span>
+<span class="nc" id="L152">			throw new MissingAttributeException(categoricalPredictor, PMMLAttributes.CATEGORICALPREDICTOR_FIELD);</span>
+		}
+
+<span class="fc" id="L155">		parseValue(name, categoricalPredictor);</span>
+
+<span class="fc" id="L157">		return super.visit(categoricalPredictor);</span>
+	}
+
+	@Override
+	public VisitorAction visit(Category category){
+<span class="nc" id="L162">		return super.visit(category);</span>
+	}
+
+	@Override
+	public VisitorAction visit(Constant constant){
+<span class="nc" id="L167">		Object value = constant.getValue();</span>
+
+<span class="nc" id="L169">		DataType dataType = constant.getDataType();</span>
+<span class="nc bnc" id="L170" title="All 2 branches missed.">		if(dataType == null){</span>
+<span class="nc" id="L171">			dataType = TypeUtil.getConstantDataType(value);</span>
+		} // End if
+
+<span class="nc bnc" id="L174" title="All 2 branches missed.">		if(value != null){</span>
+<span class="nc" id="L175">			value = parseOrCast(dataType, value);</span>
+
+<span class="nc" id="L177">			constant.setValue(value);</span>
+		}
+
+<span class="nc" id="L180">		return super.visit(constant);</span>
+	}
+
+	@Override
+	public VisitorAction visit(DataDictionary dataDictionary){
+
+<span class="pc bpc" id="L186" title="1 of 2 branches missed.">		if(dataDictionary.hasDataFields()){</span>
+<span class="fc" id="L187">			List&lt;DataField&gt; dataFields = dataDictionary.getDataFields();</span>
+
+<span class="fc bfc" id="L189" title="All 2 branches covered.">			for(ListIterator&lt;DataField&gt; it = dataFields.listIterator(); it.hasNext(); ){</span>
+<span class="fc" id="L190">				it.set(new RichDataField(it.next()));</span>
+			}
+		}
+
+<span class="fc" id="L194">		return super.visit(dataDictionary);</span>
+	}
+
+	@Override
+	public VisitorAction visit(Discretize discretize){
+<span class="nc" id="L199">		DataType dataType = discretize.getDataType();</span>
+<span class="nc bnc" id="L200" title="All 2 branches missed.">		if(dataType != null){</span>
+<span class="nc" id="L201">			Object mapMissingTo = discretize.getMapMissingTo();</span>
+<span class="nc bnc" id="L202" title="All 2 branches missed.">			if(mapMissingTo != null){</span>
+<span class="nc" id="L203">				mapMissingTo = parseOrCast(dataType, mapMissingTo);</span>
+
+<span class="nc" id="L205">				discretize.setMapMissingTo(mapMissingTo);</span>
+			}
+
+<span class="nc" id="L208">			Object defaultValue = discretize.getDefaultValue();</span>
+<span class="nc bnc" id="L209" title="All 2 branches missed.">			if(defaultValue != null){</span>
+<span class="nc" id="L210">				defaultValue = parseOrCast(dataType, defaultValue);</span>
+
+<span class="nc" id="L212">				discretize.setDefaultValue(defaultValue);</span>
+			}
+		}
+
+<span class="nc" id="L216">		return super.visit(discretize);</span>
+	}
+
+	@Override
+	public VisitorAction visit(DiscretizeBin discretizeBin){
+<span class="nc" id="L221">		Discretize discretize = (Discretize)getParent();</span>
+
+<span class="nc" id="L223">		DataType dataType = discretize.getDataType();</span>
+<span class="nc bnc" id="L224" title="All 2 branches missed.">		if(dataType != null){</span>
+<span class="nc" id="L225">			Object binValue = discretizeBin.getBinValue();</span>
+<span class="nc bnc" id="L226" title="All 2 branches missed.">			if(binValue != null){</span>
+<span class="nc" id="L227">				binValue = parseOrCast(dataType, binValue);</span>
+
+<span class="nc" id="L229">				discretizeBin.setBinValue(binValue);</span>
+			}
+		}
+
+<span class="nc" id="L233">		return super.visit(discretizeBin);</span>
+	}
+
+	@Override
+	public VisitorAction visit(FieldValue fieldValue){
+<span class="nc" id="L238">		return super.visit(fieldValue);</span>
+	}
+
+	@Override
+	public VisitorAction visit(FieldValueCount fieldValueCount){
+<span class="nc" id="L243">		return super.visit(fieldValueCount);</span>
+	}
+
+	@Override
+	public VisitorAction visit(GeneralRegressionModel generalRegressionModel){
+<span class="nc" id="L248">		BaseCumHazardTables baseCumHazardTables = generalRegressionModel.getBaseCumHazardTables();</span>
+
+<span class="nc bnc" id="L250" title="All 2 branches missed.">		if(baseCumHazardTables != null){</span>
+<span class="nc" id="L251">			FieldName baselineStrataVariable = generalRegressionModel.getBaselineStrataVariable();</span>
+
+<span class="nc bnc" id="L253" title="All 2 branches missed.">			if(baselineStrataVariable != null){</span>
+<span class="nc" id="L254">				DataType dataType = getDataType(baselineStrataVariable);</span>
+
+<span class="nc bnc" id="L256" title="All 2 branches missed.">				if(dataType != null){</span>
+<span class="nc" id="L257">					generalRegressionModel.setBaseCumHazardTables(new RichBaseCumHazardTables(dataType, baseCumHazardTables));</span>
+				}
+			}
+		}
+
+<span class="nc" id="L262">		return super.visit(generalRegressionModel);</span>
+	}
+
+	@Override
+	public VisitorAction visit(MiningField miningField){
+<span class="fc" id="L267">		FieldName name = miningField.getName();</span>
+<span class="pc bpc" id="L268" title="1 of 2 branches missed.">		if(name == null){</span>
+<span class="nc" id="L269">			throw new MissingAttributeException(miningField, PMMLAttributes.MININGFIELD_NAME);</span>
+		}
+
+<span class="fc" id="L272">		DataType dataType = getDataType(name);</span>
+<span class="pc bpc" id="L273" title="1 of 2 branches missed.">		if(dataType != null){</span>
+<span class="fc" id="L274">			Object missingValueReplacement = miningField.getMissingValueReplacement();</span>
+<span class="fc bfc" id="L275" title="All 2 branches covered.">			if(missingValueReplacement != null){</span>
+<span class="fc" id="L276">				missingValueReplacement = safeParseOrCast(dataType, missingValueReplacement);</span>
+
+<span class="fc" id="L278">				miningField.setMissingValueReplacement(missingValueReplacement);</span>
+			}
+
+<span class="fc" id="L281">			Object invalidValueReplacement = miningField.getInvalidValueReplacement();</span>
+<span class="fc bfc" id="L282" title="All 2 branches covered.">			if(invalidValueReplacement != null){</span>
+<span class="fc" id="L283">				invalidValueReplacement = safeParseOrCast(dataType, invalidValueReplacement);</span>
+
+<span class="fc" id="L285">				miningField.setInvalidValueReplacement(invalidValueReplacement);</span>
+			}
+		}
+
+<span class="fc" id="L289">		return super.visit(miningField);</span>
+	}
+
+	@Override
+	public VisitorAction visit(NormDiscrete normDiscrete){
+<span class="fc" id="L294">		FieldName name = normDiscrete.getField();</span>
+<span class="pc bpc" id="L295" title="1 of 2 branches missed.">		if(name == null){</span>
+<span class="nc" id="L296">			throw new MissingAttributeException(normDiscrete, PMMLAttributes.NORMDISCRETE_FIELD);</span>
+		}
+
+<span class="fc" id="L299">		parseValue(name, normDiscrete);</span>
+
+<span class="fc" id="L301">		return super.visit(normDiscrete);</span>
+	}
+
+	@Override
+	public VisitorAction visit(PairCounts pairCounts){
+<span class="nc" id="L306">		return super.visit(pairCounts);</span>
+	}
+
+	@Override
+	public VisitorAction visit(PPCell ppCell){
+<span class="nc" id="L311">		FieldName name = ppCell.getField();</span>
+<span class="nc bnc" id="L312" title="All 2 branches missed.">		if(name == null){</span>
+<span class="nc" id="L313">			throw new MissingAttributeException(ppCell, PMMLAttributes.PPCELL_FIELD);</span>
+		}
+
+<span class="nc" id="L316">		parseValue(name, ppCell);</span>
+
+<span class="nc" id="L318">		return super.visit(ppCell);</span>
+	}
+
+	@Override
+	public VisitorAction visit(SimplePredicate simplePredicate){
+<span class="fc" id="L323">		FieldName name = simplePredicate.getField();</span>
+<span class="pc bpc" id="L324" title="1 of 2 branches missed.">		if(name == null){</span>
+<span class="nc" id="L325">			throw new MissingAttributeException(simplePredicate, PMMLAttributes.SIMPLEPREDICATE_FIELD);</span>
+		} // End if
+
+<span class="pc bpc" id="L328" title="1 of 2 branches missed.">		if(simplePredicate.hasValue()){</span>
+<span class="fc" id="L329">			parseValue(name, simplePredicate);</span>
+		}
+
+<span class="fc" id="L332">		return super.visit(simplePredicate);</span>
+	}
+
+	@Override
+	public VisitorAction visit(SimpleSetPredicate simpleSetPredicate){
+<span class="fc" id="L337">		FieldName name = simpleSetPredicate.getField();</span>
+<span class="pc bpc" id="L338" title="1 of 2 branches missed.">		if(name == null){</span>
+<span class="nc" id="L339">			throw new MissingAttributeException(simpleSetPredicate, PMMLAttributes.SIMPLESETPREDICATE_FIELD);</span>
+		}
+
+<span class="fc" id="L342">		Array array = simpleSetPredicate.getArray();</span>
+<span class="pc bpc" id="L343" title="1 of 2 branches missed.">		if(array == null){</span>
+<span class="nc" id="L344">			throw new MissingElementException(simpleSetPredicate, PMMLElements.SIMPLESETPREDICATE_ARRAY);</span>
+		}
+
+<span class="fc" id="L347">		DataType dataType = getDataType(name);</span>
+<span class="pc bpc" id="L348" title="1 of 2 branches missed.">		if(dataType == null){</span>
+<span class="nc" id="L349">			return super.visit(simpleSetPredicate);</span>
+		}
+
+		Set&lt;?&gt; values;
+
+<span class="fc" id="L354">		Object value = array.getValue();</span>
+
+<span class="pc bpc" id="L356" title="1 of 2 branches missed.">		if(value instanceof List){</span>
+<span class="nc" id="L357">			values = new LinkedHashSet&lt;&gt;((List&lt;?&gt;)value);</span>
+		} else
+
+<span class="fc bfc" id="L360" title="All 2 branches covered.">		if(value instanceof Set){</span>
+<span class="fc" id="L361">			values = (Set&lt;?&gt;)value;</span>
+		} else
+
+		{
+<span class="fc" id="L365">			values = new LinkedHashSet&lt;&gt;(ArrayUtil.parse(array));</span>
+		}
+
+		try {
+<span class="fc" id="L369">			array = new RichComplexArray(dataType)</span>
+<span class="fc" id="L370">				.setType(array.getType())</span>
+<span class="fc" id="L371">				.setValue(values);</span>
+<span class="nc" id="L372">		} catch(TypeCheckException | IllegalArgumentException e){</span>
+
+<span class="nc bnc" id="L374" title="All 2 branches missed.">			if((Mode.LOOSE).equals(this.mode)){</span>
+<span class="nc" id="L375">				return super.visit(simpleSetPredicate);</span>
+			}
+
+<span class="nc" id="L378">			throw e;</span>
+<span class="fc" id="L379">		}</span>
+
+<span class="fc" id="L381">		simpleSetPredicate.setArray(array);</span>
+
+<span class="fc" id="L383">		return super.visit(simpleSetPredicate);</span>
+	}
+
+	@Override
+	public VisitorAction visit(TargetValue targetValue){
+<span class="nc" id="L388">		return super.visit(targetValue);</span>
+	}
+
+	@Override
+	public VisitorAction visit(TargetValueCount targetValueCount){
+<span class="nc" id="L393">		return super.visit(targetValueCount);</span>
+	}
+
+	@Override
+	public VisitorAction visit(Value value){
+<span class="fc" id="L398">		PMMLObject parent = getParent();</span>
+
+<span class="fc" id="L400">		Object simpleValue = value.getValue();</span>
+<span class="pc bpc" id="L401" title="1 of 2 branches missed.">		if(simpleValue == null){</span>
+<span class="nc" id="L402">			throw new MissingAttributeException(value, PMMLAttributes.VALUE_VALUE);</span>
+		} // End if
+
+<span class="pc bpc" id="L405" title="1 of 2 branches missed.">		if(parent instanceof Field){</span>
+<span class="fc" id="L406">			Field&lt;?&gt; field = (Field&lt;?&gt;)parent;</span>
+
+<span class="fc" id="L408">			DataType dataType = field.getDataType();</span>
+<span class="pc bpc" id="L409" title="1 of 2 branches missed.">			if(dataType != null){</span>
+<span class="fc" id="L410">				simpleValue = safeParseOrCast(dataType, simpleValue);</span>
+
+<span class="fc" id="L412">				value.setValue(simpleValue);</span>
+			}
+		}
+
+<span class="fc" id="L416">		return super.visit(value);</span>
+	}
+
+	public Mode getMode(){
+<span class="nc" id="L420">		return this.mode;</span>
+	}
+
+	public void setMode(Mode mode){
+<span class="fc" id="L424">		this.mode = Objects.requireNonNull(mode);</span>
+<span class="fc" id="L425">	}</span>
+
+	private &lt;E extends PMMLObject &amp; HasValue&lt;E&gt;&gt; void parseValue(FieldName name, E hasValue){
+<span class="fc" id="L428">		DataType dataType = this.dataTypes.get(name);</span>
+
+<span class="fc bfc" id="L430" title="All 2 branches covered.">		if(dataType == null){</span>
+<span class="fc" id="L431">			dataType = getDataType(name);</span>
+
+<span class="pc bpc" id="L433" title="1 of 2 branches missed.">			if(dataType == null){</span>
+<span class="nc" id="L434">				return;</span>
+			}
+
+<span class="fc" id="L437">			this.dataTypes.put(name, dataType);</span>
+		}
+
+<span class="fc" id="L440">		parseValue(dataType, hasValue);</span>
+<span class="fc" id="L441">	}</span>
+
+	private &lt;E extends PMMLObject &amp; HasValue&lt;E&gt;&gt; void parseValue(DataType dataType, E hasValue){
+<span class="fc" id="L444">		Object value = hasValue.getValue();</span>
+<span class="pc bpc" id="L445" title="1 of 2 branches missed.">		if(value == null){</span>
+<span class="nc" id="L446">			throw new MissingAttributeException(MissingAttributeException.formatMessage(XPathUtil.formatElement(hasValue.getClass()) + &quot;@value&quot;), hasValue);</span>
+		}
+
+<span class="fc" id="L449">		value = parseOrCast(dataType, value);</span>
+
+<span class="fc" id="L451">		hasValue.setValue(value);</span>
+<span class="fc" id="L452">	}</span>
+
+	private DataType getDataType(FieldName name){
+<span class="fc" id="L455">		DataType dataType = null;</span>
+
+<span class="fc" id="L457">		Collection&lt;Field&lt;?&gt;&gt; fields = getFields();</span>
+<span class="fc bfc" id="L458" title="All 2 branches covered.">		for(Field&lt;?&gt; field : fields){</span>
+
+<span class="fc bfc" id="L460" title="All 2 branches covered.">			if((name).equals(field.getName())){</span>
+
+<span class="pc bpc" id="L462" title="3 of 4 branches missed.">				if((dataType == null) || (dataType).equals(field.getDataType())){</span>
+<span class="fc" id="L463">					dataType = field.getDataType();</span>
+				} else
+
+				{
+<span class="nc" id="L467">					return null;</span>
+				}
+			}
+<span class="fc" id="L470">		}</span>
+
+<span class="fc" id="L472">		return dataType;</span>
+	}
+
+	private Object parseOrCast(DataType dataType, Object value){
+
+		try {
+<span class="fc" id="L478">			return TypeUtil.parseOrCast(dataType, value);</span>
+<span class="nc" id="L479">		} catch(IllegalArgumentException | TypeCheckException e){</span>
+
+<span class="nc bnc" id="L481" title="All 2 branches missed.">			if((Mode.LOOSE).equals(this.mode)){</span>
+<span class="nc" id="L482">				return value;</span>
+			}
+
+<span class="nc" id="L485">			throw e;</span>
+		}
+	}
+
+	private Object safeParseOrCast(DataType dataType, Object value){
+
+		try {
+<span class="fc" id="L492">			return TypeUtil.parseOrCast(dataType, value);</span>
+<span class="fc" id="L493">		} catch(IllegalArgumentException | TypeCheckException e){</span>
+<span class="fc" id="L494">			return value;</span>
+		}
+	}
+
+<span class="fc" id="L498">	static</span>
+	public enum Mode {
+<span class="fc" id="L500">		LOOSE,</span>
+<span class="fc" id="L501">		STRICT,</span>
+	}
+
+<span class="fc" id="L504">	public static final ThreadLocal&lt;Mode&gt; MODE_PROVIDER = new ThreadLocal&lt;Mode&gt;(){</span>
+
+		@Override
+		public Mode initialValue(){
+<span class="nc" id="L508">			return Mode.LOOSE;</span>
+		}
+	};
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.2.201808211720</span></div></body></html>

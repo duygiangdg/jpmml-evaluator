@@ -1,0 +1,184 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>SecondsSinceMidnight.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">JPMML evaluator</a> &gt; <a href="index.source.html" class="el_package">org.jpmml.evaluator</a> &gt; <span class="el_source">SecondsSinceMidnight.java</span></div><h1>SecondsSinceMidnight.java</h1><pre class="source lang-java linenums">/*
+ * Copyright (c) 2013 Villu Ruusmann
+ *
+ * This file is part of JPMML-Evaluator
+ *
+ * JPMML-Evaluator is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Affero General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * JPMML-Evaluator is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Affero General Public License for more details.
+ *
+ * You should have received a copy of the GNU Affero General Public License
+ * along with JPMML-Evaluator.  If not, see &lt;http://www.gnu.org/licenses/&gt;.
+ */
+package org.jpmml.evaluator;
+
+import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeFormatterBuilder;
+import java.time.format.SignStyle;
+import java.time.temporal.ChronoField;
+import java.time.temporal.ChronoUnit;
+import java.time.temporal.Temporal;
+import java.time.temporal.TemporalAccessor;
+import java.time.temporal.TemporalField;
+import java.time.temporal.TemporalQuery;
+import java.time.temporal.TemporalUnit;
+import java.time.temporal.ValueRange;
+
+public class SecondsSinceMidnight extends SimplePeriod&lt;SecondsSinceMidnight&gt; {
+
+<span class="fc" id="L35">	private long seconds = 0;</span>
+
+
+<span class="fc" id="L38">	public SecondsSinceMidnight(long seconds){</span>
+<span class="fc" id="L39">		setSeconds(seconds);</span>
+<span class="fc" id="L40">	}</span>
+
+	@Override
+	public long longValue(){
+<span class="fc" id="L44">		return getSeconds();</span>
+	}
+
+	@Override
+	public int compareTo(SecondsSinceMidnight that){
+<span class="nc" id="L49">		return Long.compare(this.getSeconds(), that.getSeconds());</span>
+	}
+
+	@Override
+	public int hashCode(){
+<span class="nc" id="L54">		return Long.hashCode(getSeconds());</span>
+	}
+
+	@Override
+	public boolean equals(Object object){
+
+<span class="nc bnc" id="L60" title="All 2 branches missed.">		if(object instanceof SecondsSinceMidnight){</span>
+<span class="nc" id="L61">			SecondsSinceMidnight that = (SecondsSinceMidnight)object;</span>
+
+<span class="nc bnc" id="L63" title="All 2 branches missed.">			return (this.getSeconds() == that.getSeconds());</span>
+		}
+
+<span class="nc" id="L66">		return false;</span>
+	}
+
+	private SecondsSinceMidnight toNegative(){
+<span class="fc" id="L70">		setSeconds(-1 * getSeconds());</span>
+
+<span class="fc" id="L72">		return this;</span>
+	}
+
+	public long getSeconds(){
+<span class="fc" id="L76">		return this.seconds;</span>
+	}
+
+	private void setSeconds(long seconds){
+<span class="fc" id="L80">		this.seconds = seconds;</span>
+<span class="fc" id="L81">	}</span>
+
+	static
+	public SecondsSinceMidnight parse(String string){
+<span class="fc" id="L85">		DateTimeFormatter formatter = SecondsSinceMidnight.FORMATTER;</span>
+
+<span class="fc bfc" id="L87" title="All 2 branches covered.">		if(string.startsWith(&quot;-&quot;)){</span>
+<span class="fc" id="L88">			SecondsSinceMidnight period = formatter.parse(string.substring(1), SecondsSinceMidnight.QUERY);</span>
+
+<span class="fc" id="L90">			return period.toNegative();</span>
+		} else
+
+		{
+<span class="fc" id="L94">			SecondsSinceMidnight period = formatter.parse(string, SecondsSinceMidnight.QUERY);</span>
+
+<span class="fc" id="L96">			return period;</span>
+		}
+	}
+
+	static
+	private DateTimeFormatter createFormatter(){
+<span class="fc" id="L102">		DateTimeFormatterBuilder builder = new DateTimeFormatterBuilder()</span>
+<span class="fc" id="L103">			.appendValue(SecondsSinceMidnight.HOURS_OF_EPOCH, 1, 4, SignStyle.NOT_NEGATIVE)</span>
+<span class="fc" id="L104">			.appendLiteral(':')</span>
+<span class="fc" id="L105">			.appendValue(ChronoField.MINUTE_OF_HOUR, 2)</span>
+<span class="fc" id="L106">			.appendLiteral(':')</span>
+<span class="fc" id="L107">			.appendValue(ChronoField.SECOND_OF_MINUTE, 2);</span>
+
+<span class="fc" id="L109">		return builder.toFormatter();</span>
+	}
+
+<span class="fc" id="L112">	private static final TemporalField HOURS_OF_EPOCH = new TemporalField(){</span>
+
+<span class="fc" id="L114">		private ValueRange range = ValueRange.of(0, Long.MAX_VALUE);</span>
+
+
+		@Override
+		public TemporalUnit getBaseUnit(){
+<span class="nc" id="L119">			return ChronoUnit.HOURS;</span>
+		}
+
+		@Override
+		public TemporalUnit getRangeUnit(){
+<span class="nc" id="L124">			return ChronoUnit.FOREVER;</span>
+		}
+
+		@Override
+		public ValueRange range(){
+<span class="nc" id="L129">			return this.range;</span>
+		}
+
+		@Override
+		public boolean isDateBased(){
+<span class="nc" id="L134">			return false;</span>
+		}
+
+		@Override
+		public boolean isTimeBased(){
+<span class="nc" id="L139">			return false;</span>
+		}
+
+		@Override
+		public boolean isSupportedBy(TemporalAccessor temporal){
+<span class="nc" id="L144">			return temporal.isSupported(this);</span>
+		}
+
+		@Override
+		public ValueRange rangeRefinedBy(TemporalAccessor temporal){
+<span class="nc" id="L149">			return temporal.range(this);</span>
+		}
+
+		@Override
+		public long getFrom(TemporalAccessor temporal){
+<span class="nc" id="L154">			return temporal.getLong(this);</span>
+		}
+
+		@Override
+		public &lt;R extends Temporal&gt; R adjustInto(R temporal, long value){
+<span class="nc" id="L159">			return (R)temporal.with(this, value);</span>
+		}
+
+		@Override
+		public String toString(){
+<span class="nc" id="L164">			return &quot;HoursOfEpoch&quot;;</span>
+		}
+	};
+
+<span class="fc" id="L168">	private static final DateTimeFormatter FORMATTER = createFormatter();</span>
+
+<span class="fc" id="L170">	private static final TemporalQuery&lt;SecondsSinceMidnight&gt; QUERY = new TemporalQuery&lt;SecondsSinceMidnight&gt;(){</span>
+
+		@Override
+		public SecondsSinceMidnight queryFrom(TemporalAccessor temporal){
+<span class="fc" id="L174">			long hoursOfEpoch = temporal.getLong(SecondsSinceMidnight.HOURS_OF_EPOCH);</span>
+<span class="fc" id="L175">			long minutesOfHour = temporal.getLong(ChronoField.MINUTE_OF_HOUR);</span>
+<span class="fc" id="L176">			long secondsOfMinute = temporal.getLong(ChronoField.SECOND_OF_MINUTE);</span>
+
+<span class="fc" id="L178">			long seconds = (hoursOfEpoch * 60 * 60) + (minutesOfHour * 60) + secondsOfMinute;</span>
+
+<span class="fc" id="L180">			return new SecondsSinceMidnight(seconds);</span>
+		}
+	};
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.2.201808211720</span></div></body></html>

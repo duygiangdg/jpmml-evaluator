@@ -1,0 +1,90 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>FieldValueUtil.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">JPMML evaluator</a> &gt; <a href="index.source.html" class="el_package">org.jpmml.evaluator</a> &gt; <span class="el_source">FieldValueUtil.java</span></div><h1>FieldValueUtil.java</h1><pre class="source lang-java linenums">/*
+ * Copyright (c) 2013 Villu Ruusmann
+ *
+ * This file is part of JPMML-Evaluator
+ *
+ * JPMML-Evaluator is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Affero General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * JPMML-Evaluator is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Affero General Public License for more details.
+ *
+ * You should have received a copy of the GNU Affero General Public License
+ * along with JPMML-Evaluator.  If not, see &lt;http://www.gnu.org/licenses/&gt;.
+ */
+package org.jpmml.evaluator;
+
+import java.util.Collection;
+
+import org.dmg.pmml.DataType;
+import org.dmg.pmml.OpType;
+
+public class FieldValueUtil {
+
+	private FieldValueUtil(){
+	}
+
+	static
+	public FieldValue create(Object value){
+
+<span class="fc bfc" id="L34" title="All 2 branches covered.">		if(value == null){</span>
+<span class="fc" id="L35">			return FieldValues.MISSING_VALUE;</span>
+		}
+
+		DataType dataType;
+
+<span class="fc bfc" id="L40" title="All 2 branches covered.">		if(value instanceof Collection){</span>
+<span class="fc" id="L41">			Collection&lt;?&gt; values = (Collection&lt;?&gt;)value;</span>
+
+<span class="fc" id="L43">			dataType = TypeUtil.getDataType(values);</span>
+<span class="fc" id="L44">		} else</span>
+
+		{
+<span class="fc" id="L47">			dataType = TypeUtil.getDataType(value);</span>
+		}
+
+<span class="fc" id="L50">		OpType opType = TypeUtil.getOpType(dataType);</span>
+
+<span class="fc" id="L52">		return FieldValue.create(dataType, opType, value);</span>
+	}
+
+	static
+	public FieldValue create(DataType dataType, OpType opType, Object value){
+
+<span class="fc bfc" id="L58" title="All 2 branches covered.">		if(value == null){</span>
+<span class="fc" id="L59">			return FieldValues.MISSING_VALUE;</span>
+		}
+
+<span class="fc" id="L62">		return FieldValue.create(dataType, opType, value);</span>
+	}
+
+	static
+	public FieldValue create(TypeInfo typeInfo, Object value){
+
+<span class="fc bfc" id="L68" title="All 2 branches covered.">		if(value == null){</span>
+<span class="fc" id="L69">			return FieldValues.MISSING_VALUE;</span>
+		}
+
+<span class="fc" id="L72">		return FieldValue.create(typeInfo, value);</span>
+	}
+
+	static
+	public boolean isMissing(Object value){
+<span class="fc bfc" id="L77" title="All 2 branches covered.">		return (value == null);</span>
+	}
+
+	static
+	public boolean isMissing(FieldValue value){
+<span class="fc bfc" id="L82" title="All 2 branches covered.">		return (value == null);</span>
+	}
+
+	static
+	public Object getValue(FieldValue value){
+<span class="fc bfc" id="L87" title="All 2 branches covered.">		return (value != null ? value.getValue() : null);</span>
+	}
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.2.201808211720</span></div></body></html>

@@ -1,0 +1,369 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>MiningModelUtil.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">JPMML evaluator</a> &gt; <a href="index.source.html" class="el_package">org.jpmml.evaluator.mining</a> &gt; <span class="el_source">MiningModelUtil.java</span></div><h1>MiningModelUtil.java</h1><pre class="source lang-java linenums">/*
+ * Copyright (c) 2017 Villu Ruusmann
+ *
+ * This file is part of JPMML-Evaluator
+ *
+ * JPMML-Evaluator is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Affero General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * JPMML-Evaluator is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Affero General Public License for more details.
+ *
+ * You should have received a copy of the GNU Affero General Public License
+ * along with JPMML-Evaluator.  If not, see &lt;http://www.gnu.org/licenses/&gt;.
+ */
+package org.jpmml.evaluator.mining;
+
+import java.util.Collection;
+import java.util.Collections;
+import java.util.List;
+
+import org.dmg.pmml.DataType;
+import org.dmg.pmml.mining.Segmentation;
+import org.jpmml.evaluator.EvaluatorUtil;
+import org.jpmml.evaluator.HasProbability;
+import org.jpmml.evaluator.ProbabilityAggregator;
+import org.jpmml.evaluator.TypeCheckException;
+import org.jpmml.evaluator.TypeUtil;
+import org.jpmml.evaluator.Value;
+import org.jpmml.evaluator.ValueAggregator;
+import org.jpmml.evaluator.ValueFactory;
+import org.jpmml.evaluator.ValueMap;
+import org.jpmml.evaluator.VoteAggregator;
+
+public class MiningModelUtil {
+
+	private MiningModelUtil(){
+	}
+
+	static
+	public &lt;V extends Number&gt; Value&lt;V&gt; aggregateValues(ValueFactory&lt;V&gt; valueFactory, Segmentation.MultipleModelMethod multipleModelMethod, Segmentation.MissingPredictionTreatment missingPredictionTreatment, double missingThreshold, List&lt;SegmentResult&gt; segmentResults){
+		ValueAggregator&lt;V&gt; aggregator;
+
+<span class="nc bnc" id="L47" title="All 5 branches missed.">		switch(multipleModelMethod){</span>
+			case AVERAGE:
+			case SUM:
+<span class="nc" id="L50">				aggregator = new ValueAggregator&lt;&gt;(valueFactory.newVector(0));</span>
+<span class="nc" id="L51">				break;</span>
+			case MEDIAN:
+<span class="nc" id="L53">				aggregator = new ValueAggregator&lt;&gt;(valueFactory.newVector(segmentResults.size()));</span>
+<span class="nc" id="L54">				break;</span>
+			case WEIGHTED_AVERAGE:
+			case WEIGHTED_SUM:
+<span class="nc" id="L57">				aggregator = new ValueAggregator&lt;&gt;(valueFactory.newVector(0), valueFactory.newVector(0), valueFactory.newVector(0));</span>
+<span class="nc" id="L58">				break;</span>
+			case WEIGHTED_MEDIAN:
+<span class="nc" id="L60">				aggregator = new ValueAggregator&lt;&gt;(valueFactory.newVector(segmentResults.size()), valueFactory.newVector(segmentResults.size()));</span>
+<span class="nc" id="L61">				break;</span>
+			default:
+<span class="nc" id="L63">				throw new IllegalArgumentException();</span>
+		}
+
+<span class="nc" id="L66">		Fraction&lt;V&gt; missingFraction = null;</span>
+
+		segmentResults:
+<span class="nc bnc" id="L69" title="All 2 branches missed.">		for(SegmentResult segmentResult : segmentResults){</span>
+<span class="nc" id="L70">			Object targetValue = EvaluatorUtil.decode(segmentResult.getTargetValue());</span>
+
+<span class="nc bnc" id="L72" title="All 2 branches missed.">			if(targetValue == null){</span>
+
+<span class="nc bnc" id="L74" title="All 4 branches missed.">				switch(missingPredictionTreatment){</span>
+					case RETURN_MISSING:
+<span class="nc" id="L76">						return null;</span>
+					case SKIP_SEGMENT:
+<span class="nc bnc" id="L78" title="All 2 branches missed.">						if(missingFraction == null){</span>
+<span class="nc" id="L79">							missingFraction = new Fraction&lt;&gt;(valueFactory, segmentResults);</span>
+						} // End if
+
+<span class="nc bnc" id="L82" title="All 2 branches missed.">						if(missingFraction.update(segmentResult, missingThreshold)){</span>
+<span class="nc" id="L83">							return null;</span>
+						}
+
+						continue segmentResults;
+					case CONTINUE:
+<span class="nc" id="L88">						return null;</span>
+					default:
+<span class="nc" id="L90">						throw new IllegalArgumentException();</span>
+				}
+			}
+
+			Number value;
+
+			try {
+<span class="nc bnc" id="L97" title="All 2 branches missed.">				if(targetValue instanceof Number){</span>
+<span class="nc" id="L98">					value = (Number)targetValue;</span>
+				} else
+
+				{
+<span class="nc" id="L102">					value = (Number)TypeUtil.cast(DataType.DOUBLE, targetValue);</span>
+				}
+<span class="nc" id="L104">			} catch(TypeCheckException tce){</span>
+<span class="nc" id="L105">				throw tce.ensureContext(segmentResult.getSegment());</span>
+<span class="nc" id="L106">			}</span>
+
+<span class="nc bnc" id="L108" title="All 3 branches missed.">			switch(multipleModelMethod){</span>
+				case AVERAGE:
+				case SUM:
+				case MEDIAN:
+<span class="nc" id="L112">					aggregator.add(value);</span>
+<span class="nc" id="L113">					break;</span>
+				case WEIGHTED_AVERAGE:
+				case WEIGHTED_SUM:
+				case WEIGHTED_MEDIAN:
+<span class="nc" id="L117">					double weight = segmentResult.getWeight();</span>
+
+<span class="nc" id="L119">					aggregator.add(value, weight);</span>
+<span class="nc" id="L120">					break;</span>
+				default:
+<span class="nc" id="L122">					throw new IllegalArgumentException();</span>
+			}
+<span class="nc" id="L124">		}</span>
+
+<span class="nc bnc" id="L126" title="All 7 branches missed.">		switch(multipleModelMethod){</span>
+			case AVERAGE:
+<span class="nc" id="L128">				return aggregator.average();</span>
+			case WEIGHTED_AVERAGE:
+<span class="nc" id="L130">				return aggregator.weightedAverage();</span>
+			case SUM:
+<span class="nc" id="L132">				return aggregator.sum();</span>
+			case WEIGHTED_SUM:
+<span class="nc" id="L134">				return aggregator.weightedSum();</span>
+			case MEDIAN:
+<span class="nc" id="L136">				return aggregator.median();</span>
+			case WEIGHTED_MEDIAN:
+<span class="nc" id="L138">				return aggregator.weightedMedian();</span>
+			default:
+<span class="nc" id="L140">				throw new IllegalArgumentException();</span>
+		}
+	}
+
+	static
+	public &lt;V extends Number&gt; ValueMap&lt;String, V&gt; aggregateVotes(ValueFactory&lt;V&gt; valueFactory, Segmentation.MultipleModelMethod multipleModelMethod, Segmentation.MissingPredictionTreatment missingPredictionTreatment, double missingThreshold, List&lt;SegmentResult&gt; segmentResults){
+<span class="fc" id="L146">		VoteAggregator&lt;String, V&gt; aggregator = new VoteAggregator&lt;String, V&gt;(){</span>
+
+			@Override
+			public ValueFactory&lt;V&gt; getValueFactory(){
+<span class="fc" id="L150">				return valueFactory;</span>
+			}
+		};
+
+<span class="fc" id="L154">		Fraction&lt;V&gt; missingFraction = null;</span>
+
+		segmentResults:
+<span class="fc bfc" id="L157" title="All 2 branches covered.">		for(SegmentResult segmentResult : segmentResults){</span>
+<span class="fc" id="L158">			Object targetValue = EvaluatorUtil.decode(segmentResult.getTargetValue());</span>
+
+<span class="fc bfc" id="L160" title="All 2 branches covered.">			if(targetValue == null){</span>
+
+<span class="pc bpc" id="L162" title="2 of 3 branches missed.">				switch(missingPredictionTreatment){</span>
+					case RETURN_MISSING:
+<span class="nc" id="L164">						return null;</span>
+					case SKIP_SEGMENT:
+					case CONTINUE:
+<span class="fc bfc" id="L167" title="All 2 branches covered.">						if(missingFraction == null){</span>
+<span class="fc" id="L168">							missingFraction = new Fraction&lt;&gt;(valueFactory, segmentResults);</span>
+						} // End if
+
+<span class="fc bfc" id="L171" title="All 2 branches covered.">						if(missingFraction.update(segmentResult, missingThreshold)){</span>
+<span class="fc" id="L172">							return null;</span>
+						}
+						break;
+					default:
+<span class="nc" id="L176">						throw new IllegalArgumentException();</span>
+				} // End switch
+
+<span class="pc bpc" id="L179" title="2 of 3 branches missed.">				switch(missingPredictionTreatment){</span>
+					case SKIP_SEGMENT:
+<span class="nc" id="L181">						continue segmentResults;</span>
+					case CONTINUE:
+<span class="fc" id="L183">						break;</span>
+					default:
+<span class="nc" id="L185">						throw new IllegalArgumentException();</span>
+				}
+			}
+
+			String key;
+
+			try {
+<span class="fc bfc" id="L192" title="All 2 branches covered.">				if(targetValue == null){</span>
+<span class="fc" id="L193">					key = null;</span>
+				} else
+
+				{
+<span class="fc" id="L197">					key = TypeUtil.format(targetValue);</span>
+				}
+<span class="nc" id="L199">			} catch(TypeCheckException tce){</span>
+<span class="nc" id="L200">				throw tce.ensureContext(segmentResult.getSegment());</span>
+<span class="fc" id="L201">			}</span>
+
+<span class="pc bpc" id="L203" title="1 of 3 branches missed.">			switch(multipleModelMethod){</span>
+				case MAJORITY_VOTE:
+<span class="fc" id="L205">					aggregator.add(key);</span>
+<span class="fc" id="L206">					break;</span>
+				case WEIGHTED_MAJORITY_VOTE:
+<span class="fc" id="L208">					double weight = segmentResult.getWeight();</span>
+
+<span class="fc" id="L210">					aggregator.add(key, weight);</span>
+<span class="fc" id="L211">					break;</span>
+				default:
+<span class="nc" id="L213">					throw new IllegalArgumentException();</span>
+			}
+<span class="fc" id="L215">		}</span>
+
+<span class="fc" id="L217">		ValueMap&lt;String, V&gt; result = aggregator.sumMap();</span>
+
+<span class="pc bpc" id="L219" title="1 of 2 branches missed.">		switch(missingPredictionTreatment){</span>
+			case CONTINUE:
+				// Remove the &quot;missing&quot; pseudo-category
+<span class="fc" id="L222">				Value&lt;V&gt; missingVoteSum = result.remove(null);</span>
+
+<span class="fc bfc" id="L224" title="All 2 branches covered.">				if(missingVoteSum != null){</span>
+<span class="fc" id="L225">					Collection&lt;Value&lt;V&gt;&gt; voteSums = result.values();</span>
+
+					// &quot;The missing result is returned if it gets the most (possibly weighted) votes&quot;
+<span class="pc bpc" id="L228" title="1 of 4 branches missed.">					if(voteSums.size() &gt; 0 &amp;&amp; (missingVoteSum).compareTo(Collections.max(voteSums)) &gt; 0){</span>
+<span class="fc" id="L229">						return null;</span>
+					}
+<span class="fc" id="L231">				}</span>
+				break;
+			default:
+				break;
+		}
+
+<span class="fc" id="L237">		return result;</span>
+	}
+
+	static
+	public &lt;V extends Number&gt; ValueMap&lt;String, V&gt; aggregateProbabilities(ValueFactory&lt;V&gt; valueFactory, Segmentation.MultipleModelMethod multipleModelMethod, Segmentation.MissingPredictionTreatment missingPredictionTreatment, double missingThreshold, List&lt;String&gt; categories, List&lt;SegmentResult&gt; segmentResults){
+		ProbabilityAggregator&lt;V&gt; aggregator;
+
+<span class="nc bnc" id="L244" title="All 4 branches missed.">		switch(multipleModelMethod){</span>
+			case AVERAGE:
+<span class="nc" id="L246">				aggregator = new ProbabilityAggregator&lt;V&gt;(0){</span>
+
+					@Override
+					public ValueFactory&lt;V&gt; getValueFactory(){
+<span class="nc" id="L250">						return valueFactory;</span>
+					}
+				};
+<span class="nc" id="L253">				break;</span>
+			case WEIGHTED_AVERAGE:
+<span class="nc" id="L255">				aggregator = new ProbabilityAggregator&lt;V&gt;(0, valueFactory.newVector(0)){</span>
+
+					@Override
+					public ValueFactory&lt;V&gt; getValueFactory(){
+<span class="nc" id="L259">						return valueFactory;</span>
+					}
+				};
+<span class="nc" id="L262">				break;</span>
+			case MEDIAN:
+			case MAX:
+<span class="nc" id="L265">				aggregator = new ProbabilityAggregator&lt;V&gt;(segmentResults.size()){</span>
+
+					@Override
+					public ValueFactory&lt;V&gt; getValueFactory(){
+<span class="nc" id="L269">						return valueFactory;</span>
+					}
+				};
+<span class="nc" id="L272">				break;</span>
+			default:
+<span class="nc" id="L274">				throw new IllegalArgumentException();</span>
+		}
+
+<span class="nc" id="L277">		Fraction&lt;V&gt; missingFraction = null;</span>
+
+		segmentResults:
+<span class="nc bnc" id="L280" title="All 2 branches missed.">		for(SegmentResult segmentResult : segmentResults){</span>
+<span class="nc" id="L281">			Object targetValue = segmentResult.getTargetValue();</span>
+
+<span class="nc bnc" id="L283" title="All 2 branches missed.">			if(targetValue == null){</span>
+
+<span class="nc bnc" id="L285" title="All 4 branches missed.">				switch(missingPredictionTreatment){</span>
+					case RETURN_MISSING:
+<span class="nc" id="L287">						return null;</span>
+					case SKIP_SEGMENT:
+<span class="nc bnc" id="L289" title="All 2 branches missed.">						if(missingFraction == null){</span>
+<span class="nc" id="L290">							missingFraction = new Fraction&lt;&gt;(valueFactory, segmentResults);</span>
+						} // End if
+
+<span class="nc bnc" id="L293" title="All 2 branches missed.">						if(missingFraction.update(segmentResult, missingThreshold)){</span>
+<span class="nc" id="L294">							return null;</span>
+						}
+
+						continue segmentResults;
+					case CONTINUE:
+<span class="nc" id="L299">						return null;</span>
+					default:
+<span class="nc" id="L301">						throw new IllegalArgumentException();</span>
+				}
+			}
+
+			HasProbability hasProbability;
+
+			try {
+<span class="nc" id="L308">				hasProbability = TypeUtil.cast(HasProbability.class, targetValue);</span>
+<span class="nc" id="L309">			} catch(TypeCheckException tce){</span>
+<span class="nc" id="L310">				throw tce.ensureContext(segmentResult.getSegment());</span>
+<span class="nc" id="L311">			}</span>
+
+<span class="nc bnc" id="L313" title="All 3 branches missed.">			switch(multipleModelMethod){</span>
+				case AVERAGE:
+				case MEDIAN:
+				case MAX:
+<span class="nc" id="L317">					aggregator.add(hasProbability);</span>
+<span class="nc" id="L318">					break;</span>
+				case WEIGHTED_AVERAGE:
+<span class="nc" id="L320">					double weight = segmentResult.getWeight();</span>
+
+<span class="nc" id="L322">					aggregator.add(hasProbability, weight);</span>
+<span class="nc" id="L323">					break;</span>
+				default:
+<span class="nc" id="L325">					throw new IllegalArgumentException();</span>
+			}
+<span class="nc" id="L327">		}</span>
+
+<span class="nc bnc" id="L329" title="All 5 branches missed.">		switch(multipleModelMethod){</span>
+			case AVERAGE:
+<span class="nc" id="L331">				return aggregator.averageMap();</span>
+			case WEIGHTED_AVERAGE:
+<span class="nc" id="L333">				return aggregator.weightedAverageMap();</span>
+			case MEDIAN:
+<span class="nc" id="L335">				return aggregator.medianMap(categories);</span>
+			case MAX:
+<span class="nc" id="L337">				return aggregator.maxMap(categories);</span>
+			default:
+<span class="nc" id="L339">				throw new IllegalArgumentException();</span>
+		}
+	}
+
+	static
+	private class Fraction&lt;V extends Number&gt; {
+
+<span class="fc" id="L346">		private Value&lt;V&gt; weightSum = null;</span>
+
+<span class="fc" id="L348">		private Value&lt;V&gt; missingWeightSum = null;</span>
+
+
+<span class="fc" id="L351">		private Fraction(ValueFactory&lt;V&gt; valueFactory, List&lt;SegmentResult&gt; segmentResults){</span>
+<span class="fc" id="L352">			this.weightSum = valueFactory.newValue();</span>
+<span class="fc" id="L353">			this.missingWeightSum = valueFactory.newValue();</span>
+
+<span class="fc bfc" id="L355" title="All 2 branches covered.">			for(int i = 0, max = segmentResults.size(); i &lt; max; i++){</span>
+<span class="fc" id="L356">				SegmentResult segmentResult = segmentResults.get(i);</span>
+
+<span class="fc" id="L358">				this.weightSum.add(segmentResult.getWeight());</span>
+			}
+<span class="fc" id="L360">		}</span>
+
+		public boolean update(SegmentResult segmentResult, double missingThreshold){
+<span class="fc" id="L363">			this.missingWeightSum.add(segmentResult.getWeight());</span>
+
+<span class="fc bfc" id="L365" title="All 2 branches covered.">			return (this.missingWeightSum.doubleValue() / this.weightSum.doubleValue()) &gt; missingThreshold;</span>
+		}
+	}
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.2.201808211720</span></div></body></html>

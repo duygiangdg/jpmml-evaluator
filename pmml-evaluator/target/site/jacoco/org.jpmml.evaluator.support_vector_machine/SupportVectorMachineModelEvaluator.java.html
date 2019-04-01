@@ -1,0 +1,516 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>SupportVectorMachineModelEvaluator.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">JPMML evaluator</a> &gt; <a href="index.source.html" class="el_package">org.jpmml.evaluator.support_vector_machine</a> &gt; <span class="el_source">SupportVectorMachineModelEvaluator.java</span></div><h1>SupportVectorMachineModelEvaluator.java</h1><pre class="source lang-java linenums">/*
+ * Copyright (c) 2013 KNIME.com AG, Zurich, Switzerland
+ * All rights reserved.
+ *
+ * Redistribution and use in source and binary forms, with or without modification,
+ * are permitted provided that the following conditions are met:
+ *
+ * 1. Redistributions of source code must retain the above copyright notice, this
+ *    list of conditions and the following disclaimer.
+ * 2. Redistributions in binary form must reproduce the above copyright notice,
+ *    this list of conditions and the following disclaimer in the documentation
+ *    and/or other materials provided with the distribution.
+ * 3. Neither the name of the copyright holder nor the names of its contributors
+ *    may be used to endorse or promote products derived from this software without
+ *    specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS &quot;AS IS&quot; AND
+ * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+ * WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+ * DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR
+ * ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+ * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+ * LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON
+ * ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+ * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ */
+package org.jpmml.evaluator.support_vector_machine;
+
+import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+
+import com.google.common.cache.CacheLoader;
+import com.google.common.cache.LoadingCache;
+import com.google.common.collect.ImmutableMap;
+import com.google.common.primitives.Doubles;
+import com.google.common.primitives.Floats;
+import org.dmg.pmml.Array;
+import org.dmg.pmml.FieldName;
+import org.dmg.pmml.FieldRef;
+import org.dmg.pmml.MathContext;
+import org.dmg.pmml.PMML;
+import org.dmg.pmml.PMMLObject;
+import org.dmg.pmml.RealSparseArray;
+import org.dmg.pmml.regression.CategoricalPredictor;
+import org.dmg.pmml.support_vector_machine.Coefficient;
+import org.dmg.pmml.support_vector_machine.Coefficients;
+import org.dmg.pmml.support_vector_machine.Kernel;
+import org.dmg.pmml.support_vector_machine.SupportVector;
+import org.dmg.pmml.support_vector_machine.SupportVectorMachine;
+import org.dmg.pmml.support_vector_machine.SupportVectorMachineModel;
+import org.dmg.pmml.support_vector_machine.SupportVectors;
+import org.dmg.pmml.support_vector_machine.VectorDictionary;
+import org.dmg.pmml.support_vector_machine.VectorFields;
+import org.dmg.pmml.support_vector_machine.VectorInstance;
+import org.jpmml.evaluator.ArrayUtil;
+import org.jpmml.evaluator.CacheUtil;
+import org.jpmml.evaluator.Classification;
+import org.jpmml.evaluator.EvaluationContext;
+import org.jpmml.evaluator.EvaluationException;
+import org.jpmml.evaluator.ExpressionUtil;
+import org.jpmml.evaluator.FieldValue;
+import org.jpmml.evaluator.FieldValueUtil;
+import org.jpmml.evaluator.InvalidAttributeException;
+import org.jpmml.evaluator.InvalidElementException;
+import org.jpmml.evaluator.InvalidElementListException;
+import org.jpmml.evaluator.MisplacedAttributeException;
+import org.jpmml.evaluator.MisplacedElementException;
+import org.jpmml.evaluator.MissingAttributeException;
+import org.jpmml.evaluator.MissingElementException;
+import org.jpmml.evaluator.MissingValueException;
+import org.jpmml.evaluator.ModelEvaluator;
+import org.jpmml.evaluator.Numbers;
+import org.jpmml.evaluator.PMMLAttributes;
+import org.jpmml.evaluator.PMMLElements;
+import org.jpmml.evaluator.PMMLException;
+import org.jpmml.evaluator.PMMLUtil;
+import org.jpmml.evaluator.SparseArrayUtil;
+import org.jpmml.evaluator.TargetUtil;
+import org.jpmml.evaluator.TypeUtil;
+import org.jpmml.evaluator.UnsupportedAttributeException;
+import org.jpmml.evaluator.Value;
+import org.jpmml.evaluator.ValueFactory;
+import org.jpmml.evaluator.ValueMap;
+import org.jpmml.evaluator.XPathUtil;
+import org.jpmml.model.ReflectionUtil;
+
+public class SupportVectorMachineModelEvaluator extends ModelEvaluator&lt;SupportVectorMachineModel&gt; {
+
+<span class="fc" id="L93">	transient</span>
+	private Map&lt;String, Object&gt; vectorMap = null;
+
+
+	public SupportVectorMachineModelEvaluator(PMML pmml){
+<span class="nc" id="L98">		this(pmml, PMMLUtil.findModel(pmml, SupportVectorMachineModel.class));</span>
+<span class="nc" id="L99">	}</span>
+
+	public SupportVectorMachineModelEvaluator(PMML pmml, SupportVectorMachineModel supportVectorMachineModel){
+<span class="fc" id="L102">		super(pmml, supportVectorMachineModel);</span>
+
+<span class="fc" id="L104">		boolean maxWins = supportVectorMachineModel.isMaxWins();</span>
+<span class="pc bpc" id="L105" title="1 of 2 branches missed.">		if(maxWins){</span>
+<span class="nc" id="L106">			throw new UnsupportedAttributeException(supportVectorMachineModel, PMMLAttributes.SUPPORTVECTORMACHINEMODEL_MAXWINS, maxWins);</span>
+		}
+
+<span class="fc" id="L109">		SupportVectorMachineModel.Representation representation = supportVectorMachineModel.getRepresentation();</span>
+<span class="pc bpc" id="L110" title="1 of 2 branches missed.">		switch(representation){</span>
+			case SUPPORT_VECTORS:
+<span class="fc" id="L112">				break;</span>
+			default:
+<span class="nc" id="L114">				throw new UnsupportedAttributeException(supportVectorMachineModel, representation);</span>
+		}
+
+<span class="fc" id="L117">		VectorDictionary vectorDictionary = supportVectorMachineModel.getVectorDictionary();</span>
+<span class="pc bpc" id="L118" title="1 of 2 branches missed.">		if(vectorDictionary == null){</span>
+<span class="nc" id="L119">			throw new MissingElementException(supportVectorMachineModel, PMMLElements.SUPPORTVECTORMACHINEMODEL_VECTORDICTIONARY);</span>
+		}
+
+<span class="fc" id="L122">		VectorFields vectorFields = vectorDictionary.getVectorFields();</span>
+<span class="pc bpc" id="L123" title="1 of 2 branches missed.">		if(vectorFields == null){</span>
+<span class="nc" id="L124">			throw new MissingElementException(vectorDictionary, PMMLElements.VECTORDICTIONARY_VECTORFIELDS);</span>
+		} // End if
+
+<span class="pc bpc" id="L127" title="1 of 2 branches missed.">		if(!supportVectorMachineModel.hasSupportVectorMachines()){</span>
+<span class="nc" id="L128">			throw new MissingElementException(supportVectorMachineModel, PMMLElements.SUPPORTVECTORMACHINEMODEL_SUPPORTVECTORMACHINES);</span>
+		}
+<span class="fc" id="L130">	}</span>
+
+	@Override
+	public String getSummary(){
+<span class="nc" id="L134">		return &quot;Support vector machine&quot;;</span>
+	}
+
+	@Override
+	protected &lt;V extends Number&gt; Map&lt;FieldName, ?&gt; evaluateRegression(ValueFactory&lt;V&gt; valueFactory, EvaluationContext context){
+<span class="fc" id="L139">		SupportVectorMachineModel supportVectorMachineModel = getModel();</span>
+
+<span class="fc" id="L141">		List&lt;SupportVectorMachine&gt; supportVectorMachines = supportVectorMachineModel.getSupportVectorMachines();</span>
+<span class="pc bpc" id="L142" title="1 of 2 branches missed.">		if(supportVectorMachines.size() != 1){</span>
+<span class="nc" id="L143">			throw new InvalidElementListException(supportVectorMachines);</span>
+		}
+
+<span class="fc" id="L146">		SupportVectorMachine supportVectorMachine = supportVectorMachines.get(0);</span>
+
+<span class="fc" id="L148">		Object input = createInput(context);</span>
+
+<span class="fc" id="L150">		Value&lt;V&gt; result = evaluateSupportVectorMachine(valueFactory, supportVectorMachine, input);</span>
+
+<span class="fc" id="L152">		return TargetUtil.evaluateRegression(getTargetField(), result);</span>
+	}
+
+	@Override
+	protected &lt;V extends Number&gt; Map&lt;FieldName, ? extends Classification&lt;V&gt;&gt; evaluateClassification(ValueFactory&lt;V&gt; valueFactory, EvaluationContext context){
+<span class="fc" id="L157">		SupportVectorMachineModel supportVectorMachineModel = getModel();</span>
+
+<span class="fc" id="L159">		List&lt;SupportVectorMachine&gt; supportVectorMachines = supportVectorMachineModel.getSupportVectorMachines();</span>
+
+<span class="fc" id="L161">		Object alternateBinaryTargetCategory = supportVectorMachineModel.getAlternateBinaryTargetCategory();</span>
+
+		ValueMap&lt;String, V&gt; values;
+
+<span class="fc" id="L165">		SupportVectorMachineModel.ClassificationMethod classificationMethod = getClassificationMethod();</span>
+<span class="pc bpc" id="L166" title="2 of 3 branches missed.">		switch(classificationMethod){</span>
+			case ONE_AGAINST_ALL:
+<span class="nc" id="L168">				values = new ValueMap&lt;&gt;(2 * supportVectorMachines.size());</span>
+<span class="nc" id="L169">				break;</span>
+			case ONE_AGAINST_ONE:
+<span class="fc" id="L171">				values = new VoteMap&lt;String, V&gt;(2 * supportVectorMachines.size()){</span>
+
+					@Override
+					public ValueFactory&lt;V&gt; getValueFactory(){
+<span class="fc" id="L175">						return valueFactory;</span>
+					}
+				};
+<span class="fc" id="L178">				break;</span>
+			default:
+<span class="nc" id="L180">				throw new UnsupportedAttributeException(supportVectorMachineModel, classificationMethod);</span>
+		}
+
+<span class="fc" id="L183">		Object input = createInput(context);</span>
+
+<span class="fc bfc" id="L185" title="All 2 branches covered.">		for(SupportVectorMachine supportVectorMachine : supportVectorMachines){</span>
+<span class="fc" id="L186">			Object targetCategory = supportVectorMachine.getTargetCategory();</span>
+<span class="pc bpc" id="L187" title="1 of 2 branches missed.">			if(targetCategory == null){</span>
+<span class="nc" id="L188">				throw new MissingAttributeException(supportVectorMachine, PMMLAttributes.SUPPORTVECTORMACHINE_TARGETCATEGORY);</span>
+			}
+
+<span class="fc" id="L191">			Object alternateTargetCategory = supportVectorMachine.getAlternateTargetCategory();</span>
+
+<span class="fc" id="L193">			Value&lt;V&gt; value = evaluateSupportVectorMachine(valueFactory, supportVectorMachine, input);</span>
+
+<span class="pc bpc" id="L195" title="2 of 3 branches missed.">			switch(classificationMethod){</span>
+				case ONE_AGAINST_ALL:
+					{
+<span class="nc bnc" id="L198" title="All 2 branches missed.">						if(alternateTargetCategory != null){</span>
+<span class="nc" id="L199">							throw new MisplacedAttributeException(supportVectorMachine, PMMLAttributes.SUPPORTVECTORMACHINE_ALTERNATETARGETCATEGORY, alternateTargetCategory);</span>
+						}
+
+<span class="nc" id="L202">						targetCategory = TypeUtil.format(targetCategory);</span>
+
+<span class="nc" id="L204">						values.put((String)targetCategory, value);</span>
+					}
+<span class="nc" id="L206">					break;</span>
+				case ONE_AGAINST_ONE:
+					{
+						Object label;
+
+<span class="pc bpc" id="L211" title="1 of 2 branches missed.">						if(alternateBinaryTargetCategory != null){</span>
+
+<span class="pc bpc" id="L213" title="1 of 2 branches missed.">							if(alternateTargetCategory != null){</span>
+<span class="nc" id="L214">								throw new MisplacedAttributeException(supportVectorMachine, PMMLAttributes.SUPPORTVECTORMACHINE_ALTERNATETARGETCATEGORY, alternateTargetCategory);</span>
+							}
+
+<span class="fc" id="L217">							value.round();</span>
+
+							// &quot;A rounded value of 1 corresponds to the targetCategory attribute of the SupportVectorMachine element&quot;
+<span class="fc bfc" id="L220" title="All 2 branches covered.">							if(value.equals(1d)){</span>
+<span class="fc" id="L221">								label = targetCategory;</span>
+							} else
+
+							// &quot;A rounded value of 0 corresponds to the alternateBinaryTargetCategory attribute of the SupportVectorMachineModel element&quot;
+<span class="pc bpc" id="L225" title="1 of 2 branches missed.">							if(value.equals(0d)){</span>
+<span class="fc" id="L226">								label = alternateBinaryTargetCategory;</span>
+							} else
+
+							// &quot;The numeric prediction must be between 0 and 1&quot;
+							{
+<span class="nc" id="L231">								throw new EvaluationException(&quot;Expected &quot; + PMMLException.formatValue(0d) + &quot; or &quot; + PMMLException.formatValue(1d) + &quot;, got &quot; + PMMLException.formatValue(value.getValue()));</span>
+							}
+						} else
+
+						{
+<span class="nc bnc" id="L236" title="All 2 branches missed.">							if(alternateTargetCategory == null){</span>
+<span class="nc" id="L237">								throw new MissingAttributeException(supportVectorMachine, PMMLAttributes.SUPPORTVECTORMACHINE_ALTERNATETARGETCATEGORY);</span>
+							}
+
+<span class="nc" id="L240">							Double threshold = supportVectorMachine.getThreshold();</span>
+<span class="nc bnc" id="L241" title="All 2 branches missed.">							if(threshold == null){</span>
+<span class="nc" id="L242">								threshold = supportVectorMachineModel.getThreshold();</span>
+							} // End if
+
+							// &quot;If the numeric prediction is smaller than the threshold, then it corresponds to the targetCategory attribute&quot;
+<span class="nc bnc" id="L246" title="All 2 branches missed.">							if(value.compareTo(threshold) &lt; 0){</span>
+<span class="nc" id="L247">								label = targetCategory;</span>
+							} else
+
+							{
+<span class="nc" id="L251">								label = alternateTargetCategory;</span>
+							}
+						}
+
+<span class="fc" id="L255">						label = TypeUtil.format(label);</span>
+
+<span class="fc" id="L257">						VoteMap&lt;String, V&gt; votes = (VoteMap&lt;String, V&gt;)values;</span>
+
+<span class="fc" id="L259">						votes.increment((String)label);</span>
+					}
+<span class="fc" id="L261">					break;</span>
+				default:
+					break;
+			}
+<span class="fc" id="L265">		}</span>
+
+		Classification&lt;V&gt; result;
+
+<span class="pc bpc" id="L269" title="2 of 3 branches missed.">		switch(classificationMethod){</span>
+			case ONE_AGAINST_ALL:
+<span class="nc" id="L271">				result = new DistanceDistribution&lt;&gt;(values);</span>
+<span class="nc" id="L272">				break;</span>
+			case ONE_AGAINST_ONE:
+<span class="fc" id="L274">				result = new VoteDistribution&lt;&gt;(values);</span>
+<span class="fc" id="L275">				break;</span>
+			default:
+<span class="nc" id="L277">				throw new UnsupportedAttributeException(supportVectorMachineModel, classificationMethod);</span>
+		}
+
+<span class="fc" id="L280">		return TargetUtil.evaluateClassification(getTargetField(), result);</span>
+	}
+
+	private &lt;V extends Number&gt; Value&lt;V&gt; evaluateSupportVectorMachine(ValueFactory&lt;V&gt; valueFactory, SupportVectorMachine supportVectorMachine, Object input){
+<span class="fc" id="L284">		SupportVectorMachineModel supportVectorMachineModel = getModel();</span>
+
+<span class="fc" id="L286">		Value&lt;V&gt; result = valueFactory.newValue();</span>
+
+<span class="fc" id="L288">		Kernel kernel = supportVectorMachineModel.getKernel();</span>
+<span class="pc bpc" id="L289" title="1 of 2 branches missed.">		if(kernel == null){</span>
+<span class="nc" id="L290">			throw new MissingElementException(MissingElementException.formatMessage(XPathUtil.formatElement(supportVectorMachineModel.getClass()) + &quot;/&lt;Kernel&gt;&quot;), supportVectorMachine);</span>
+		}
+
+<span class="fc" id="L293">		Coefficients coefficients = supportVectorMachine.getCoefficients();</span>
+<span class="fc" id="L294">		Iterator&lt;Coefficient&gt; coefficientIt = coefficients.iterator();</span>
+
+<span class="fc" id="L296">		SupportVectors supportVectors = supportVectorMachine.getSupportVectors();</span>
+<span class="fc" id="L297">		Iterator&lt;SupportVector&gt; supportVectorIt = supportVectors.iterator();</span>
+
+<span class="fc" id="L299">		Map&lt;String, Object&gt; vectorMap = getVectorMap();</span>
+
+<span class="pc bpc" id="L301" title="1 of 4 branches missed.">		while(coefficientIt.hasNext() &amp;&amp; supportVectorIt.hasNext()){</span>
+<span class="fc" id="L302">			Coefficient coefficient = coefficientIt.next();</span>
+<span class="fc" id="L303">			SupportVector supportVector = supportVectorIt.next();</span>
+
+<span class="fc" id="L305">			String vectorId = supportVector.getVectorId();</span>
+<span class="pc bpc" id="L306" title="1 of 2 branches missed.">			if(vectorId == null){</span>
+<span class="nc" id="L307">				throw new MissingAttributeException(supportVector, PMMLAttributes.SUPPORTVECTOR_VECTORID);</span>
+			}
+
+<span class="fc" id="L310">			Object vector = vectorMap.get(vectorId);</span>
+<span class="pc bpc" id="L311" title="1 of 2 branches missed.">			if(vector == null){</span>
+<span class="nc" id="L312">				throw new InvalidAttributeException(supportVector, PMMLAttributes.SUPPORTVECTOR_VECTORID, vectorId);</span>
+			}
+
+<span class="fc" id="L315">			Value&lt;V&gt; value = KernelUtil.evaluate(kernel, valueFactory, input, vector);</span>
+
+<span class="fc" id="L317">			result.add(coefficient.getValue(), value.getValue());</span>
+<span class="fc" id="L318">		}</span>
+
+<span class="pc bpc" id="L320" title="2 of 4 branches missed.">		if(coefficientIt.hasNext() || supportVectorIt.hasNext()){</span>
+<span class="nc" id="L321">			throw new InvalidElementException(supportVectorMachine);</span>
+		}
+
+<span class="fc" id="L324">		double absoluteValue = coefficients.getAbsoluteValue();</span>
+<span class="pc bpc" id="L325" title="1 of 2 branches missed.">		if(absoluteValue != 0d){</span>
+<span class="fc" id="L326">			result.add(absoluteValue);</span>
+		}
+
+<span class="fc" id="L329">		return result;</span>
+	}
+
+	private SupportVectorMachineModel.ClassificationMethod getClassificationMethod(){
+<span class="fc" id="L333">		SupportVectorMachineModel supportVectorMachineModel = getModel();</span>
+
+		// Older versions of several popular PMML producer software are known to omit the classificationMethod attribute.
+		// The method SupportVectorMachineModel#getRepresentation() replaces a missing value with the default value &quot;OneAgainstAll&quot;, which may lead to incorrect behaviour.
+		// The workaround is to bypass this method using Java Reflection API, and infer the correct classification method type based on evidence.
+<span class="fc" id="L338">		SupportVectorMachineModel.ClassificationMethod classificationMethod = ReflectionUtil.getFieldValue(PMMLAttributes.SUPPORTVECTORMACHINEMODEL_CLASSIFICATIONMETHOD, supportVectorMachineModel);</span>
+<span class="pc bpc" id="L339" title="1 of 2 branches missed.">		if(classificationMethod != null){</span>
+<span class="nc" id="L340">			return classificationMethod;</span>
+		}
+
+<span class="fc" id="L343">		List&lt;SupportVectorMachine&gt; supportVectorMachines = supportVectorMachineModel.getSupportVectorMachines();</span>
+
+<span class="fc" id="L345">		Object alternateBinaryTargetCategory = supportVectorMachineModel.getAlternateBinaryTargetCategory();</span>
+<span class="pc bpc" id="L346" title="1 of 2 branches missed.">		if(alternateBinaryTargetCategory != null){</span>
+
+<span class="pc bpc" id="L348" title="1 of 2 branches missed.">			if(supportVectorMachines.size() == 1){</span>
+<span class="fc" id="L349">				SupportVectorMachine supportVectorMachine = supportVectorMachines.get(0);</span>
+
+<span class="fc" id="L351">				Object targetCategory = supportVectorMachine.getTargetCategory();</span>
+<span class="pc bpc" id="L352" title="1 of 2 branches missed.">				if(targetCategory != null){</span>
+<span class="fc" id="L353">					return SupportVectorMachineModel.ClassificationMethod.ONE_AGAINST_ONE;</span>
+				}
+
+<span class="nc" id="L356">				throw new InvalidElementException(supportVectorMachine);</span>
+			}
+
+<span class="nc" id="L359">			throw new InvalidElementException(supportVectorMachineModel);</span>
+		}
+
+<span class="nc bnc" id="L362" title="All 2 branches missed.">		for(SupportVectorMachine supportVectorMachine : supportVectorMachines){</span>
+<span class="nc" id="L363">			Object targetCategory = supportVectorMachine.getTargetCategory();</span>
+<span class="nc" id="L364">			Object alternateTargetCategory = supportVectorMachine.getAlternateTargetCategory();</span>
+
+<span class="nc bnc" id="L366" title="All 2 branches missed.">			if(targetCategory != null){</span>
+
+<span class="nc bnc" id="L368" title="All 2 branches missed.">				if(alternateTargetCategory != null){</span>
+<span class="nc" id="L369">					return SupportVectorMachineModel.ClassificationMethod.ONE_AGAINST_ONE;</span>
+				}
+
+<span class="nc" id="L372">				return SupportVectorMachineModel.ClassificationMethod.ONE_AGAINST_ALL;</span>
+			}
+
+<span class="nc" id="L375">			throw new InvalidElementException(supportVectorMachine);</span>
+		}
+
+<span class="nc" id="L378">		throw new InvalidElementException(supportVectorMachineModel);</span>
+	}
+
+	private Object createInput(EvaluationContext context){
+<span class="fc" id="L382">		SupportVectorMachineModel supportVectorMachineModel = getModel();</span>
+
+<span class="fc" id="L384">		VectorDictionary vectorDictionary = supportVectorMachineModel.getVectorDictionary();</span>
+
+<span class="fc" id="L386">		VectorFields vectorFields = vectorDictionary.getVectorFields();</span>
+
+<span class="fc" id="L388">		List&lt;PMMLObject&gt; content = vectorFields.getContent();</span>
+
+<span class="fc" id="L390">		List&lt;Number&gt; result = new ArrayList&lt;&gt;(content.size());</span>
+
+<span class="fc bfc" id="L392" title="All 2 branches covered.">		for(int i = 0; i &lt; content.size(); i++){</span>
+<span class="fc" id="L393">			PMMLObject object = content.get(i);</span>
+
+<span class="pc bpc" id="L395" title="1 of 2 branches missed.">			if(object instanceof FieldRef){</span>
+<span class="fc" id="L396">				FieldRef fieldRef = (FieldRef)object;</span>
+
+<span class="fc" id="L398">				FieldName name = fieldRef.getField();</span>
+
+<span class="fc" id="L400">				FieldValue value = ExpressionUtil.evaluate(fieldRef, context);</span>
+<span class="pc bpc" id="L401" title="1 of 2 branches missed.">				if(FieldValueUtil.isMissing(value)){</span>
+<span class="nc" id="L402">					throw new MissingValueException(name, vectorFields);</span>
+				}
+
+<span class="fc" id="L405">				result.add(value.asNumber());</span>
+<span class="fc" id="L406">			} else</span>
+
+<span class="nc bnc" id="L408" title="All 2 branches missed.">			if(object instanceof CategoricalPredictor){</span>
+<span class="nc" id="L409">				CategoricalPredictor categoricalPredictor = (CategoricalPredictor)object;</span>
+
+<span class="nc" id="L411">				FieldName name = categoricalPredictor.getName();</span>
+<span class="nc bnc" id="L412" title="All 2 branches missed.">				if(name == null){</span>
+<span class="nc" id="L413">					throw new MissingAttributeException(categoricalPredictor, PMMLAttributes.CATEGORICALPREDICTOR_FIELD);</span>
+				}
+
+<span class="nc" id="L416">				FieldValue value = context.evaluate(name);</span>
+<span class="nc bnc" id="L417" title="All 2 branches missed.">				if(FieldValueUtil.isMissing(value)){</span>
+<span class="nc" id="L418">					throw new MissingValueException(name, categoricalPredictor);</span>
+				}
+
+<span class="nc" id="L421">				double coefficient = categoricalPredictor.getCoefficient();</span>
+<span class="nc bnc" id="L422" title="All 2 branches missed.">				if(coefficient != 1d){</span>
+<span class="nc" id="L423">					throw new InvalidAttributeException(categoricalPredictor, PMMLAttributes.CATEGORICALPREDICTOR_COEFFICIENT, coefficient);</span>
+				}
+
+<span class="nc" id="L426">				boolean equals = value.equals(categoricalPredictor);</span>
+
+<span class="nc bnc" id="L428" title="All 2 branches missed.">				result.add(equals ? Numbers.DOUBLE_ONE : Numbers.DOUBLE_ZERO);</span>
+<span class="nc" id="L429">			} else</span>
+
+			{
+<span class="nc" id="L432">				throw new MisplacedElementException(object);</span>
+			}
+		}
+
+<span class="fc" id="L436">		return toArray(supportVectorMachineModel, result);</span>
+	}
+
+	private Map&lt;String, Object&gt; getVectorMap(){
+
+<span class="pc bpc" id="L441" title="1 of 2 branches missed.">		if(this.vectorMap == null){</span>
+<span class="fc" id="L442">			this.vectorMap = getValue(SupportVectorMachineModelEvaluator.vectorCache);</span>
+		}
+
+<span class="fc" id="L445">		return this.vectorMap;</span>
+	}
+
+	static
+	private Map&lt;String, Object&gt; parseVectorDictionary(SupportVectorMachineModel supportVectorMachineModel){
+<span class="fc" id="L450">		VectorDictionary vectorDictionary = supportVectorMachineModel.getVectorDictionary();</span>
+
+<span class="fc" id="L452">		VectorFields vectorFields = vectorDictionary.getVectorFields();</span>
+
+<span class="fc" id="L454">		List&lt;PMMLObject&gt; content = vectorFields.getContent();</span>
+
+<span class="fc" id="L456">		Map&lt;String, Object&gt; result = new LinkedHashMap&lt;&gt;();</span>
+
+<span class="fc" id="L458">		List&lt;VectorInstance&gt; vectorInstances = vectorDictionary.getVectorInstances();</span>
+<span class="fc bfc" id="L459" title="All 2 branches covered.">		for(VectorInstance vectorInstance : vectorInstances){</span>
+<span class="fc" id="L460">			String id = vectorInstance.getId();</span>
+<span class="pc bpc" id="L461" title="1 of 2 branches missed.">			if(id == null){</span>
+<span class="nc" id="L462">				throw new MissingAttributeException(vectorInstance, PMMLAttributes.VECTORINSTANCE_ID);</span>
+			}
+
+<span class="fc" id="L465">			Array array = vectorInstance.getArray();</span>
+<span class="fc" id="L466">			RealSparseArray sparseArray = vectorInstance.getRealSparseArray();</span>
+
+			List&lt;? extends Number&gt; values;
+
+<span class="pc bpc" id="L470" title="3 of 4 branches missed.">			if(array != null &amp;&amp; sparseArray == null){</span>
+<span class="nc" id="L471">				values = ArrayUtil.asNumberList(array);</span>
+			} else
+
+<span class="pc bpc" id="L474" title="2 of 4 branches missed.">			if(array == null &amp;&amp; sparseArray != null){</span>
+<span class="fc" id="L475">				values = SparseArrayUtil.asNumberList(sparseArray);</span>
+			} else
+
+			{
+<span class="nc" id="L479">				throw new InvalidElementException(vectorInstance);</span>
+			} // End if
+
+<span class="pc bpc" id="L482" title="1 of 2 branches missed.">			if(content.size() != values.size()){</span>
+<span class="nc" id="L483">				throw new InvalidElementException(vectorInstance);</span>
+			}
+
+<span class="fc" id="L486">			Object vector = toArray(supportVectorMachineModel, values);</span>
+
+<span class="fc" id="L488">			result.put(id, vector);</span>
+<span class="fc" id="L489">		}</span>
+
+<span class="fc" id="L491">		return result;</span>
+	}
+
+	static
+	private Object toArray(SupportVectorMachineModel supportVectorMachineModel, List&lt;? extends Number&gt; values){
+<span class="fc" id="L496">		MathContext mathContext = supportVectorMachineModel.getMathContext();</span>
+
+<span class="pc bpc" id="L498" title="2 of 3 branches missed.">		switch(mathContext){</span>
+			case FLOAT:
+<span class="nc" id="L500">				return Floats.toArray(values);</span>
+			case DOUBLE:
+<span class="fc" id="L502">				return Doubles.toArray(values);</span>
+			default:
+<span class="nc" id="L504">				throw new UnsupportedAttributeException(supportVectorMachineModel, mathContext);</span>
+		}
+	}
+
+<span class="fc" id="L508">	private static final LoadingCache&lt;SupportVectorMachineModel, Map&lt;String, Object&gt;&gt; vectorCache = CacheUtil.buildLoadingCache(new CacheLoader&lt;SupportVectorMachineModel, Map&lt;String, Object&gt;&gt;(){</span>
+
+		@Override
+		public Map&lt;String, Object&gt; load(SupportVectorMachineModel supportVectorMachineModel){
+<span class="fc" id="L512">			return ImmutableMap.copyOf(parseVectorDictionary(supportVectorMachineModel));</span>
+		}
+	});
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.2.201808211720</span></div></body></html>

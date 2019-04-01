@@ -1,0 +1,571 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>NeuralNetworkEvaluator.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">JPMML evaluator</a> &gt; <a href="index.source.html" class="el_package">org.jpmml.evaluator.neural_network</a> &gt; <span class="el_source">NeuralNetworkEvaluator.java</span></div><h1>NeuralNetworkEvaluator.java</h1><pre class="source lang-java linenums">/*
+ * Copyright (c) 2017 Villu Ruusmann
+ *
+ * This file is part of JPMML-Evaluator
+ *
+ * JPMML-Evaluator is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Affero General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * JPMML-Evaluator is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Affero General Public License for more details.
+ *
+ * You should have received a copy of the GNU Affero General Public License
+ * along with JPMML-Evaluator.  If not, see &lt;http://www.gnu.org/licenses/&gt;.
+ */
+package org.jpmml.evaluator.neural_network;
+
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.atomic.AtomicInteger;
+
+import com.google.common.cache.CacheLoader;
+import com.google.common.cache.LoadingCache;
+import com.google.common.collect.ArrayListMultimap;
+import com.google.common.collect.BiMap;
+import com.google.common.collect.ImmutableBiMap;
+import com.google.common.collect.ListMultimap;
+import org.dmg.pmml.DataField;
+import org.dmg.pmml.DerivedField;
+import org.dmg.pmml.Expression;
+import org.dmg.pmml.Field;
+import org.dmg.pmml.FieldName;
+import org.dmg.pmml.FieldRef;
+import org.dmg.pmml.HasFieldReference;
+import org.dmg.pmml.NormContinuous;
+import org.dmg.pmml.NormDiscrete;
+import org.dmg.pmml.PMML;
+import org.dmg.pmml.PMMLObject;
+import org.dmg.pmml.neural_network.Connection;
+import org.dmg.pmml.neural_network.NeuralEntity;
+import org.dmg.pmml.neural_network.NeuralInput;
+import org.dmg.pmml.neural_network.NeuralInputs;
+import org.dmg.pmml.neural_network.NeuralLayer;
+import org.dmg.pmml.neural_network.NeuralNetwork;
+import org.dmg.pmml.neural_network.NeuralOutput;
+import org.dmg.pmml.neural_network.NeuralOutputs;
+import org.dmg.pmml.neural_network.Neuron;
+import org.jpmml.evaluator.CacheUtil;
+import org.jpmml.evaluator.Classification;
+import org.jpmml.evaluator.EntityUtil;
+import org.jpmml.evaluator.EvaluationContext;
+import org.jpmml.evaluator.ExpressionUtil;
+import org.jpmml.evaluator.FieldValue;
+import org.jpmml.evaluator.FieldValueUtil;
+import org.jpmml.evaluator.HasEntityRegistry;
+import org.jpmml.evaluator.InvalidAttributeException;
+import org.jpmml.evaluator.InvalidElementException;
+import org.jpmml.evaluator.InvalidElementListException;
+import org.jpmml.evaluator.MisplacedElementException;
+import org.jpmml.evaluator.MissingAttributeException;
+import org.jpmml.evaluator.MissingElementException;
+import org.jpmml.evaluator.MissingFieldException;
+import org.jpmml.evaluator.ModelEvaluator;
+import org.jpmml.evaluator.NormalizationUtil;
+import org.jpmml.evaluator.PMMLAttributes;
+import org.jpmml.evaluator.PMMLElements;
+import org.jpmml.evaluator.PMMLUtil;
+import org.jpmml.evaluator.TargetField;
+import org.jpmml.evaluator.TargetUtil;
+import org.jpmml.evaluator.TypeUtil;
+import org.jpmml.evaluator.UnsupportedAttributeException;
+import org.jpmml.evaluator.Value;
+import org.jpmml.evaluator.ValueFactory;
+import org.jpmml.evaluator.ValueMap;
+import org.jpmml.evaluator.XPathUtil;
+
+public class NeuralNetworkEvaluator extends ModelEvaluator&lt;NeuralNetwork&gt; implements HasEntityRegistry&lt;NeuralEntity&gt; {
+
+<span class="nc" id="L84">	transient</span>
+	private Map&lt;FieldName, List&lt;NeuralOutput&gt;&gt; neuralOutputMap = null;
+
+<span class="nc" id="L87">	transient</span>
+	private BiMap&lt;String, NeuralEntity&gt; entityRegistry = null;
+
+
+	public NeuralNetworkEvaluator(PMML pmml){
+<span class="nc" id="L92">		this(pmml, PMMLUtil.findModel(pmml, NeuralNetwork.class));</span>
+<span class="nc" id="L93">	}</span>
+
+	public NeuralNetworkEvaluator(PMML pmml, NeuralNetwork neuralNetwork){
+<span class="nc" id="L96">		super(pmml, neuralNetwork);</span>
+
+<span class="nc" id="L98">		NeuralInputs neuralInputs = neuralNetwork.getNeuralInputs();</span>
+<span class="nc bnc" id="L99" title="All 2 branches missed.">		if(neuralInputs == null){</span>
+<span class="nc" id="L100">			throw new MissingElementException(neuralNetwork, PMMLElements.NEURALNETWORK_NEURALINPUTS);</span>
+		} // End if
+
+<span class="nc bnc" id="L103" title="All 2 branches missed.">		if(!neuralInputs.hasNeuralInputs()){</span>
+<span class="nc" id="L104">			throw new MissingElementException(neuralInputs, PMMLElements.NEURALINPUTS_NEURALINPUTS);</span>
+		} // End if
+
+<span class="nc bnc" id="L107" title="All 2 branches missed.">		if(!neuralNetwork.hasNeuralLayers()){</span>
+<span class="nc" id="L108">			throw new MissingElementException(neuralNetwork, PMMLElements.NEURALNETWORK_NEURALLAYERS);</span>
+		}
+
+<span class="nc" id="L111">		NeuralOutputs neuralOutputs = neuralNetwork.getNeuralOutputs();</span>
+<span class="nc bnc" id="L112" title="All 2 branches missed.">		if(neuralOutputs == null){</span>
+<span class="nc" id="L113">			throw new MissingElementException(neuralNetwork, PMMLElements.NEURALNETWORK_NEURALOUTPUTS);</span>
+		} // End if
+
+<span class="nc bnc" id="L116" title="All 2 branches missed.">		if(!neuralOutputs.hasNeuralOutputs()){</span>
+<span class="nc" id="L117">			throw new MissingElementException(neuralOutputs, PMMLElements.NEURALOUTPUTS_NEURALOUTPUTS);</span>
+		}
+<span class="nc" id="L119">	}</span>
+
+	@Override
+	public String getSummary(){
+<span class="nc" id="L123">		return &quot;Neural network&quot;;</span>
+	}
+
+	@Override
+	public BiMap&lt;String, NeuralEntity&gt; getEntityRegistry(){
+
+<span class="nc bnc" id="L129" title="All 2 branches missed.">		if(this.entityRegistry == null){</span>
+<span class="nc" id="L130">			this.entityRegistry = getValue(NeuralNetworkEvaluator.entityCache);</span>
+		}
+
+<span class="nc" id="L133">		return this.entityRegistry;</span>
+	}
+
+	@Override
+	protected &lt;V extends Number&gt; Map&lt;FieldName, ?&gt; evaluateRegression(ValueFactory&lt;V&gt; valueFactory, EvaluationContext context){
+<span class="nc" id="L138">		NeuralNetwork neuralNetwork = getModel();</span>
+
+<span class="nc" id="L140">		List&lt;TargetField&gt; targetFields = getTargetFields();</span>
+
+<span class="nc" id="L142">		ValueMap&lt;String, V&gt; values = evaluateRaw(valueFactory, context);</span>
+<span class="nc bnc" id="L143" title="All 2 branches missed.">		if(values == null){</span>
+
+<span class="nc bnc" id="L145" title="All 2 branches missed.">			if(targetFields.size() == 1){</span>
+<span class="nc" id="L146">				TargetField targetField = targetFields.get(0);</span>
+
+<span class="nc" id="L148">				return TargetUtil.evaluateRegressionDefault(valueFactory, targetField);</span>
+			}
+
+<span class="nc" id="L151">			Map&lt;FieldName, Object&gt; results = new LinkedHashMap&lt;&gt;();</span>
+
+<span class="nc bnc" id="L153" title="All 2 branches missed.">			for(TargetField targetField : targetFields){</span>
+<span class="nc" id="L154">				results.putAll(TargetUtil.evaluateRegressionDefault(valueFactory, targetField));</span>
+<span class="nc" id="L155">			}</span>
+
+<span class="nc" id="L157">			return results;</span>
+		}
+
+<span class="nc" id="L160">		Map&lt;FieldName, List&lt;NeuralOutput&gt;&gt; neuralOutputMap = getNeuralOutputMap();</span>
+
+<span class="nc" id="L162">		Map&lt;FieldName, Object&gt; results = null;</span>
+
+<span class="nc bnc" id="L164" title="All 2 branches missed.">		for(TargetField targetField : targetFields){</span>
+<span class="nc" id="L165">			FieldName name = targetField.getFieldName();</span>
+
+<span class="nc" id="L167">			List&lt;NeuralOutput&gt; neuralOutputs = neuralOutputMap.get(name);</span>
+<span class="nc bnc" id="L168" title="All 2 branches missed.">			if(neuralOutputs == null){</span>
+<span class="nc" id="L169">				throw new InvalidElementException(neuralNetwork);</span>
+			} else
+
+<span class="nc bnc" id="L172" title="All 2 branches missed.">			if(neuralOutputs.size() != 1){</span>
+<span class="nc" id="L173">				throw new InvalidElementListException(neuralOutputs);</span>
+			}
+
+<span class="nc" id="L176">			NeuralOutput neuralOutput = neuralOutputs.get(0);</span>
+
+<span class="nc" id="L178">			String id = neuralOutput.getOutputNeuron();</span>
+<span class="nc bnc" id="L179" title="All 2 branches missed.">			if(id == null){</span>
+<span class="nc" id="L180">				throw new MissingAttributeException(neuralOutput, PMMLAttributes.NEURALOUTPUT_OUTPUTNEURON);</span>
+			}
+
+<span class="nc" id="L183">			Value&lt;V&gt; value = values.get(id);</span>
+<span class="nc bnc" id="L184" title="All 2 branches missed.">			if(value == null){</span>
+<span class="nc" id="L185">				throw new InvalidAttributeException(neuralOutput, PMMLAttributes.NEURALOUTPUT_OUTPUTNEURON, id);</span>
+			}
+
+<span class="nc" id="L188">			value = value.copy();</span>
+
+<span class="nc" id="L190">			Expression expression = getOutputExpression(neuralOutput);</span>
+
+<span class="nc bnc" id="L192" title="All 2 branches missed.">			if(expression instanceof FieldRef){</span>
+				// Ignored
+			} else
+
+<span class="nc bnc" id="L196" title="All 2 branches missed.">			if(expression instanceof NormContinuous){</span>
+<span class="nc" id="L197">				NormContinuous normContinuous = (NormContinuous)expression;</span>
+
+<span class="nc" id="L199">				NormalizationUtil.denormalize(normContinuous, value);</span>
+<span class="nc" id="L200">			} else</span>
+
+			{
+<span class="nc" id="L203">				throw new MisplacedElementException(expression);</span>
+			} // End if
+
+<span class="nc bnc" id="L206" title="All 2 branches missed.">			if(targetFields.size() == 1){</span>
+<span class="nc" id="L207">				return TargetUtil.evaluateRegression(targetField, value);</span>
+			} // End if
+
+<span class="nc bnc" id="L210" title="All 2 branches missed.">			if(results == null){</span>
+<span class="nc" id="L211">				results = new LinkedHashMap&lt;&gt;();</span>
+			}
+
+<span class="nc" id="L214">			results.putAll(TargetUtil.evaluateRegression(targetField, value));</span>
+<span class="nc" id="L215">		}</span>
+
+<span class="nc" id="L217">		return results;</span>
+	}
+
+	@Override
+	protected &lt;V extends Number&gt; Map&lt;FieldName, ? extends Classification&lt;V&gt;&gt; evaluateClassification(ValueFactory&lt;V&gt; valueFactory, EvaluationContext context){
+<span class="nc" id="L222">		NeuralNetwork neuralNetwork = getModel();</span>
+
+<span class="nc" id="L224">		List&lt;TargetField&gt; targetFields = getTargetFields();</span>
+
+<span class="nc" id="L226">		ValueMap&lt;String, V&gt; values = evaluateRaw(valueFactory, context);</span>
+<span class="nc bnc" id="L227" title="All 2 branches missed.">		if(values == null){</span>
+
+<span class="nc bnc" id="L229" title="All 2 branches missed.">			if(targetFields.size() == 1){</span>
+<span class="nc" id="L230">				TargetField targetField = targetFields.get(0);</span>
+
+<span class="nc" id="L232">				return TargetUtil.evaluateClassificationDefault(valueFactory, targetField);</span>
+			}
+
+<span class="nc" id="L235">			Map&lt;FieldName, Classification&lt;V&gt;&gt; results = new LinkedHashMap&lt;&gt;();</span>
+
+<span class="nc bnc" id="L237" title="All 2 branches missed.">			for(TargetField targetField : targetFields){</span>
+<span class="nc" id="L238">				results.putAll(TargetUtil.evaluateClassificationDefault(valueFactory, targetField));</span>
+<span class="nc" id="L239">			}</span>
+
+<span class="nc" id="L241">			return results;</span>
+		}
+
+<span class="nc" id="L244">		Map&lt;FieldName, List&lt;NeuralOutput&gt;&gt; neuralOutputMap = getNeuralOutputMap();</span>
+
+<span class="nc" id="L246">		BiMap&lt;String, NeuralEntity&gt; entityRegistry = getEntityRegistry();</span>
+
+<span class="nc" id="L248">		Map&lt;FieldName, Classification&lt;V&gt;&gt; results = null;</span>
+
+<span class="nc bnc" id="L250" title="All 2 branches missed.">		for(TargetField targetField : targetFields){</span>
+<span class="nc" id="L251">			FieldName name = targetField.getFieldName();</span>
+
+<span class="nc" id="L253">			List&lt;NeuralOutput&gt; neuralOutputs = neuralOutputMap.get(name);</span>
+<span class="nc bnc" id="L254" title="All 2 branches missed.">			if(neuralOutputs == null){</span>
+<span class="nc" id="L255">				throw new InvalidElementException(neuralNetwork);</span>
+			}
+
+<span class="nc" id="L258">			NeuronProbabilityDistribution&lt;V&gt; result = new NeuronProbabilityDistribution&lt;V&gt;(new ValueMap&lt;String, V&gt;(2 * neuralOutputs.size())){</span>
+
+				@Override
+				public BiMap&lt;String, NeuralEntity&gt; getEntityRegistry(){
+<span class="nc" id="L262">					return entityRegistry;</span>
+				}
+			};
+
+<span class="nc bnc" id="L266" title="All 2 branches missed.">			for(NeuralOutput neuralOutput : neuralOutputs){</span>
+<span class="nc" id="L267">				String id = neuralOutput.getOutputNeuron();</span>
+<span class="nc bnc" id="L268" title="All 2 branches missed.">				if(id == null){</span>
+<span class="nc" id="L269">					throw new MissingAttributeException(neuralOutput, PMMLAttributes.NEURALOUTPUT_OUTPUTNEURON);</span>
+				}
+
+<span class="nc" id="L272">				NeuralEntity entity = entityRegistry.get(id);</span>
+<span class="nc bnc" id="L273" title="All 2 branches missed.">				if(entity == null){</span>
+<span class="nc" id="L274">					throw new InvalidAttributeException(neuralOutput, PMMLAttributes.NEURALOUTPUT_OUTPUTNEURON, id);</span>
+				}
+
+<span class="nc" id="L277">				Value&lt;V&gt; value = values.get(id);</span>
+<span class="nc bnc" id="L278" title="All 2 branches missed.">				if(value == null){</span>
+<span class="nc" id="L279">					throw new InvalidAttributeException(neuralOutput, PMMLAttributes.NEURALOUTPUT_OUTPUTNEURON, id);</span>
+				}
+
+<span class="nc" id="L282">				Expression expression = getOutputExpression(neuralOutput);</span>
+
+<span class="nc bnc" id="L284" title="All 2 branches missed.">				if(expression instanceof NormDiscrete){</span>
+<span class="nc" id="L285">					NormDiscrete normDiscrete = (NormDiscrete)expression;</span>
+
+<span class="nc" id="L287">					Object targetCategory = normDiscrete.getValue();</span>
+<span class="nc bnc" id="L288" title="All 2 branches missed.">					if(targetCategory == null){</span>
+<span class="nc" id="L289">						throw new MissingAttributeException(normDiscrete, PMMLAttributes.NORMDISCRETE_VALUE);</span>
+					}
+
+<span class="nc" id="L292">					targetCategory = TypeUtil.format(targetCategory);</span>
+
+<span class="nc" id="L294">					result.put(entity, (String)targetCategory, value);</span>
+<span class="nc" id="L295">				} else</span>
+
+				{
+<span class="nc" id="L298">					throw new MisplacedElementException(expression);</span>
+				}
+<span class="nc" id="L300">			}</span>
+
+<span class="nc bnc" id="L302" title="All 2 branches missed.">			if(targetFields.size() == 1){</span>
+<span class="nc" id="L303">				return TargetUtil.evaluateClassification(targetField, result);</span>
+			} // End if
+
+<span class="nc bnc" id="L306" title="All 2 branches missed.">			if(results == null){</span>
+<span class="nc" id="L307">				results = new LinkedHashMap&lt;&gt;();</span>
+			}
+
+<span class="nc" id="L310">			results.putAll(TargetUtil.evaluateClassification(targetField, result));</span>
+<span class="nc" id="L311">		}</span>
+
+<span class="nc" id="L313">		return results;</span>
+	}
+
+	private Expression getOutputExpression(NeuralOutput neuralOutput){
+<span class="nc" id="L317">		DerivedField derivedField = neuralOutput.getDerivedField();</span>
+<span class="nc bnc" id="L318" title="All 2 branches missed.">		if(derivedField == null){</span>
+<span class="nc" id="L319">			throw new MissingElementException(neuralOutput, PMMLElements.NEURALOUTPUT_DERIVEDFIELD);</span>
+		}
+
+<span class="nc" id="L322">		Expression expression = ExpressionUtil.ensureExpression(derivedField);</span>
+
+<span class="nc bnc" id="L324" title="All 2 branches missed.">		if(expression instanceof FieldRef){</span>
+<span class="nc" id="L325">			FieldRef fieldRef = (FieldRef)expression;</span>
+
+<span class="nc" id="L327">			FieldName name = fieldRef.getField();</span>
+<span class="nc bnc" id="L328" title="All 2 branches missed.">			if(name == null){</span>
+<span class="nc" id="L329">				throw new MissingAttributeException(fieldRef, PMMLAttributes.FIELDREF_FIELD);</span>
+			}
+
+<span class="nc" id="L332">			Field&lt;?&gt; field = resolveField(name);</span>
+<span class="nc bnc" id="L333" title="All 2 branches missed.">			if(field == null){</span>
+<span class="nc" id="L334">				throw new MissingFieldException(name, fieldRef);</span>
+			} // End if
+
+<span class="nc bnc" id="L337" title="All 2 branches missed.">			if(field instanceof DataField){</span>
+<span class="nc" id="L338">				return expression;</span>
+			} else
+
+<span class="nc bnc" id="L341" title="All 2 branches missed.">			if(field instanceof DerivedField){</span>
+<span class="nc" id="L342">				DerivedField targetDerivedField = (DerivedField)field;</span>
+
+<span class="nc" id="L344">				Expression targetExpression = ExpressionUtil.ensureExpression(targetDerivedField);</span>
+
+<span class="nc" id="L346">				return targetExpression;</span>
+			} else
+
+			{
+<span class="nc" id="L350">				throw new InvalidAttributeException(fieldRef, PMMLAttributes.FIELDREF_FIELD, name);</span>
+			}
+		}
+
+<span class="nc" id="L354">		return expression;</span>
+	}
+
+	private &lt;V extends Number&gt; ValueMap&lt;String, V&gt; evaluateRaw(ValueFactory&lt;V&gt; valueFactory, EvaluationContext context){
+<span class="nc" id="L358">		NeuralNetwork neuralNetwork = getModel();</span>
+
+<span class="nc" id="L360">		BiMap&lt;String, NeuralEntity&gt; entityRegistry = getEntityRegistry();</span>
+
+<span class="nc" id="L362">		ValueMap&lt;String, V&gt; result = new ValueMap&lt;&gt;(2 * entityRegistry.size());</span>
+
+<span class="nc" id="L364">		NeuralInputs neuralInputs = neuralNetwork.getNeuralInputs();</span>
+<span class="nc bnc" id="L365" title="All 2 branches missed.">		for(NeuralInput neuralInput : neuralInputs){</span>
+<span class="nc" id="L366">			DerivedField derivedField = neuralInput.getDerivedField();</span>
+<span class="nc bnc" id="L367" title="All 2 branches missed.">			if(derivedField == null){</span>
+<span class="nc" id="L368">				throw new MissingElementException(neuralInput, PMMLElements.NEURALINPUT_DERIVEDFIELD);</span>
+			}
+
+<span class="nc" id="L371">			FieldValue value = ExpressionUtil.evaluateTypedExpressionContainer(derivedField, context);</span>
+<span class="nc bnc" id="L372" title="All 2 branches missed.">			if(FieldValueUtil.isMissing(value)){</span>
+<span class="nc" id="L373">				return null;</span>
+			}
+
+<span class="nc" id="L376">			Value&lt;V&gt; output = valueFactory.newValue(value.asNumber());</span>
+
+<span class="nc" id="L378">			result.put(neuralInput.getId(), output);</span>
+<span class="nc" id="L379">		}</span>
+
+<span class="nc" id="L381">		List&lt;Value&lt;V&gt;&gt; outputs = new ArrayList&lt;&gt;();</span>
+
+<span class="nc" id="L383">		List&lt;NeuralLayer&gt; neuralLayers = neuralNetwork.getNeuralLayers();</span>
+<span class="nc bnc" id="L384" title="All 2 branches missed.">		for(NeuralLayer neuralLayer : neuralLayers){</span>
+<span class="nc" id="L385">			outputs.clear();</span>
+
+<span class="nc" id="L387">			PMMLObject locatable = neuralLayer;</span>
+
+<span class="nc" id="L389">			NeuralNetwork.ActivationFunction activationFunction = neuralLayer.getActivationFunction();</span>
+<span class="nc bnc" id="L390" title="All 2 branches missed.">			if(activationFunction == null){</span>
+<span class="nc" id="L391">				locatable = neuralNetwork;</span>
+
+<span class="nc" id="L393">				activationFunction = neuralNetwork.getActivationFunction();</span>
+			} // End if
+
+<span class="nc bnc" id="L396" title="All 2 branches missed.">			if(activationFunction == null){</span>
+<span class="nc" id="L397">				throw new MissingAttributeException(neuralNetwork, PMMLAttributes.NEURALNETWORK_ACTIVATIONFUNCTION);</span>
+			}
+
+<span class="nc" id="L400">			Double threshold = neuralLayer.getThreshold();</span>
+<span class="nc bnc" id="L401" title="All 2 branches missed.">			if(threshold == null){</span>
+<span class="nc" id="L402">				threshold = neuralNetwork.getThreshold();</span>
+			}
+
+<span class="nc bnc" id="L405" title="All 3 branches missed.">			switch(activationFunction){</span>
+				case THRESHOLD:
+<span class="nc bnc" id="L407" title="All 2 branches missed.">					if(threshold == null){</span>
+<span class="nc" id="L408">						throw new MissingAttributeException(neuralNetwork, PMMLAttributes.NEURALNETWORK_THRESHOLD);</span>
+					}
+					break;
+				case LOGISTIC:
+				case TANH:
+				case IDENTITY:
+				case EXPONENTIAL:
+				case RECIPROCAL:
+				case SQUARE:
+				case GAUSS:
+				case SINE:
+				case COSINE:
+				case ELLIOTT:
+				case ARCTAN:
+				case RECTIFIER:
+<span class="nc" id="L423">					break;</span>
+				default:
+<span class="nc" id="L425">					throw new UnsupportedAttributeException(locatable, activationFunction);</span>
+			}
+
+<span class="nc" id="L428">			List&lt;Neuron&gt; neurons = neuralLayer.getNeurons();</span>
+<span class="nc bnc" id="L429" title="All 2 branches missed.">			for(int i = 0; i &lt; neurons.size(); i++){</span>
+<span class="nc" id="L430">				Neuron neuron = neurons.get(i);</span>
+
+<span class="nc" id="L432">				Value&lt;V&gt; output = valueFactory.newValue();</span>
+
+<span class="nc" id="L434">				List&lt;Connection&gt; connections = neuron.getConnections();</span>
+<span class="nc bnc" id="L435" title="All 2 branches missed.">				for(int j = 0; j &lt; connections.size(); j++){</span>
+<span class="nc" id="L436">					Connection connection = connections.get(j);</span>
+
+<span class="nc" id="L438">					String id = connection.getFrom();</span>
+<span class="nc bnc" id="L439" title="All 2 branches missed.">					if(id == null){</span>
+<span class="nc" id="L440">						throw new MissingAttributeException(connection, PMMLAttributes.CONNECTION_FROM);</span>
+					}
+
+<span class="nc" id="L443">					Value&lt;V&gt; input = result.get(id);</span>
+<span class="nc bnc" id="L444" title="All 2 branches missed.">					if(input == null){</span>
+<span class="nc" id="L445">						throw new InvalidAttributeException(connection, PMMLAttributes.CONNECTION_FROM, id);</span>
+					}
+
+<span class="nc" id="L448">					output.add(connection.getWeight(), input.getValue());</span>
+				}
+
+<span class="nc" id="L451">				Double bias = neuron.getBias();</span>
+<span class="nc bnc" id="L452" title="All 4 branches missed.">				if(bias != null &amp;&amp; bias != 0d){</span>
+<span class="nc" id="L453">					output.add(bias);</span>
+				}
+
+<span class="nc bnc" id="L456" title="All 2 branches missed.">				switch(activationFunction){</span>
+					case THRESHOLD:
+					case LOGISTIC:
+					case TANH:
+					case IDENTITY:
+					case EXPONENTIAL:
+					case RECIPROCAL:
+					case SQUARE:
+					case GAUSS:
+					case SINE:
+					case COSINE:
+					case ELLIOTT:
+					case ARCTAN:
+					case RECTIFIER:
+<span class="nc" id="L470">						NeuralNetworkUtil.activateNeuronOutput(activationFunction, threshold, output);</span>
+<span class="nc" id="L471">						break;</span>
+					default:
+<span class="nc" id="L473">						throw new UnsupportedAttributeException(locatable, activationFunction);</span>
+				}
+
+<span class="nc" id="L476">				result.put(neuron.getId(), output);</span>
+
+<span class="nc" id="L478">				outputs.add(output);</span>
+			}
+
+<span class="nc" id="L481">			locatable = neuralLayer;</span>
+
+<span class="nc" id="L483">			NeuralNetwork.NormalizationMethod normalizationMethod = neuralLayer.getNormalizationMethod();</span>
+<span class="nc bnc" id="L484" title="All 2 branches missed.">			if(normalizationMethod == null){</span>
+<span class="nc" id="L485">				locatable = neuralNetwork;</span>
+
+<span class="nc" id="L487">				normalizationMethod = neuralNetwork.getNormalizationMethod();</span>
+			}
+
+<span class="nc bnc" id="L490" title="All 2 branches missed.">			switch(normalizationMethod){</span>
+				case NONE:
+				case SIMPLEMAX:
+				case SOFTMAX:
+<span class="nc" id="L494">					NeuralNetworkUtil.normalizeNeuralLayerOutputs(normalizationMethod, outputs);</span>
+<span class="nc" id="L495">					break;</span>
+				default:
+<span class="nc" id="L497">					throw new UnsupportedAttributeException(locatable, normalizationMethod);</span>
+			}
+<span class="nc" id="L499">		}</span>
+
+<span class="nc" id="L501">		return result;</span>
+	}
+
+	private Map&lt;FieldName, List&lt;NeuralOutput&gt;&gt; getNeuralOutputMap(){
+
+<span class="nc bnc" id="L506" title="All 2 branches missed.">		if(this.neuralOutputMap == null){</span>
+<span class="nc" id="L507">			this.neuralOutputMap = parseNeuralOutputs();</span>
+		}
+
+<span class="nc" id="L510">		return this.neuralOutputMap;</span>
+	}
+
+	private Map&lt;FieldName, List&lt;NeuralOutput&gt;&gt; parseNeuralOutputs(){
+<span class="nc" id="L514">		NeuralNetwork neuralNetwork = getModel();</span>
+
+<span class="nc" id="L516">		ListMultimap&lt;FieldName, NeuralOutput&gt; result = ArrayListMultimap.create();</span>
+
+<span class="nc" id="L518">		NeuralOutputs neuralOutputs = neuralNetwork.getNeuralOutputs();</span>
+<span class="nc bnc" id="L519" title="All 2 branches missed.">		for(NeuralOutput neuralOutput : neuralOutputs){</span>
+			FieldName name;
+
+<span class="nc" id="L522">			Expression expression = getOutputExpression(neuralOutput);</span>
+
+<span class="nc bnc" id="L524" title="All 2 branches missed.">			if(expression instanceof HasFieldReference){</span>
+<span class="nc" id="L525">				HasFieldReference&lt;?&gt; hasFieldReference = (HasFieldReference&lt;?&gt;)expression;</span>
+
+<span class="nc" id="L527">				name = hasFieldReference.getField();</span>
+<span class="nc bnc" id="L528" title="All 2 branches missed.">				if(name == null){</span>
+<span class="nc" id="L529">					throw new MissingAttributeException(MissingAttributeException.formatMessage(XPathUtil.formatElement((Class)hasFieldReference.getClass()) + &quot;@field&quot;), expression);</span>
+				}
+<span class="nc" id="L531">			} else</span>
+
+			{
+<span class="nc" id="L534">				throw new MisplacedElementException(expression);</span>
+			}
+
+<span class="nc" id="L537">			result.put(name, neuralOutput);</span>
+<span class="nc" id="L538">		}</span>
+
+<span class="nc" id="L540">		return (Map)result.asMap();</span>
+	}
+
+<span class="nc" id="L543">	private static final LoadingCache&lt;NeuralNetwork, BiMap&lt;String, NeuralEntity&gt;&gt; entityCache = CacheUtil.buildLoadingCache(new CacheLoader&lt;NeuralNetwork, BiMap&lt;String, NeuralEntity&gt;&gt;(){</span>
+
+		@Override
+		public BiMap&lt;String, NeuralEntity&gt; load(NeuralNetwork neuralNetwork){
+<span class="nc" id="L547">			ImmutableBiMap.Builder&lt;String, NeuralEntity&gt; builder = new ImmutableBiMap.Builder&lt;&gt;();</span>
+
+<span class="nc" id="L549">			AtomicInteger index = new AtomicInteger(1);</span>
+
+<span class="nc" id="L551">			NeuralInputs neuralInputs = neuralNetwork.getNeuralInputs();</span>
+<span class="nc bnc" id="L552" title="All 2 branches missed.">			for(NeuralInput neuralInput : neuralInputs){</span>
+<span class="nc" id="L553">				builder = EntityUtil.put(neuralInput, index, builder);</span>
+<span class="nc" id="L554">			}</span>
+
+<span class="nc" id="L556">			List&lt;NeuralLayer&gt; neuralLayers = neuralNetwork.getNeuralLayers();</span>
+<span class="nc bnc" id="L557" title="All 2 branches missed.">			for(NeuralLayer neuralLayer : neuralLayers){</span>
+<span class="nc" id="L558">				List&lt;Neuron&gt; neurons = neuralLayer.getNeurons();</span>
+
+<span class="nc bnc" id="L560" title="All 2 branches missed.">				for(int i = 0; i &lt; neurons.size(); i++){</span>
+<span class="nc" id="L561">					Neuron neuron = neurons.get(i);</span>
+
+<span class="nc" id="L563">					builder = EntityUtil.put(neuron, index, builder);</span>
+				}
+<span class="nc" id="L565">			}</span>
+
+<span class="nc" id="L567">			return builder.build();</span>
+		}
+	});
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.2.201808211720</span></div></body></html>

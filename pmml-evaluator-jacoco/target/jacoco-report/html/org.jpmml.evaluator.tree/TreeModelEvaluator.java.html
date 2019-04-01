@@ -1,0 +1,578 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>TreeModelEvaluator.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">PMML class model evaluator code coverage</a> &gt; <a href="index.source.html" class="el_package">org.jpmml.evaluator.tree</a> &gt; <span class="el_source">TreeModelEvaluator.java</span></div><h1>TreeModelEvaluator.java</h1><pre class="source lang-java linenums">/*
+ * Copyright (c) 2013 Villu Ruusmann
+ *
+ * This file is part of JPMML-Evaluator
+ *
+ * JPMML-Evaluator is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Affero General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * JPMML-Evaluator is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Affero General Public License for more details.
+ *
+ * You should have received a copy of the GNU Affero General Public License
+ * along with JPMML-Evaluator.  If not, see &lt;http://www.gnu.org/licenses/&gt;.
+ */
+package org.jpmml.evaluator.tree;
+
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.concurrent.atomic.AtomicInteger;
+
+import com.google.common.cache.CacheLoader;
+import com.google.common.cache.LoadingCache;
+import com.google.common.collect.BiMap;
+import com.google.common.collect.ImmutableBiMap;
+import org.dmg.pmml.CompoundPredicate;
+import org.dmg.pmml.EmbeddedModel;
+import org.dmg.pmml.FieldName;
+import org.dmg.pmml.PMML;
+import org.dmg.pmml.Predicate;
+import org.dmg.pmml.ScoreDistribution;
+import org.dmg.pmml.tree.Node;
+import org.dmg.pmml.tree.TreeModel;
+import org.jpmml.evaluator.CacheUtil;
+import org.jpmml.evaluator.EntityUtil;
+import org.jpmml.evaluator.EvaluationContext;
+import org.jpmml.evaluator.EvaluationException;
+import org.jpmml.evaluator.InvalidAttributeException;
+import org.jpmml.evaluator.MisplacedAttributeException;
+import org.jpmml.evaluator.MissingAttributeException;
+import org.jpmml.evaluator.MissingElementException;
+import org.jpmml.evaluator.ModelEvaluator;
+import org.jpmml.evaluator.PMMLAttributes;
+import org.jpmml.evaluator.PMMLElements;
+import org.jpmml.evaluator.PMMLUtil;
+import org.jpmml.evaluator.PredicateUtil;
+import org.jpmml.evaluator.TargetField;
+import org.jpmml.evaluator.TargetUtil;
+import org.jpmml.evaluator.TypeUtil;
+import org.jpmml.evaluator.UndefinedResultException;
+import org.jpmml.evaluator.UnsupportedAttributeException;
+import org.jpmml.evaluator.UnsupportedElementException;
+import org.jpmml.evaluator.Value;
+import org.jpmml.evaluator.ValueFactory;
+import org.jpmml.evaluator.ValueMap;
+
+public class TreeModelEvaluator extends ModelEvaluator&lt;TreeModel&gt; implements HasNodeRegistry {
+
+<span class="fc" id="L63">	transient</span>
+	private BiMap&lt;String, Node&gt; entityRegistry = null;
+
+
+	public TreeModelEvaluator(PMML pmml){
+<span class="fc" id="L68">		this(pmml, PMMLUtil.findModel(pmml, TreeModel.class));</span>
+<span class="fc" id="L69">	}</span>
+
+	public TreeModelEvaluator(PMML pmml, TreeModel treeModel){
+<span class="fc" id="L72">		super(pmml, treeModel);</span>
+
+<span class="fc" id="L74">		Node root = treeModel.getNode();</span>
+<span class="pc bpc" id="L75" title="1 of 2 branches missed.">		if(root == null){</span>
+<span class="nc" id="L76">			throw new MissingElementException(treeModel, PMMLElements.TREEMODEL_NODE);</span>
+		}
+<span class="fc" id="L78">	}</span>
+
+	@Override
+	public String getSummary(){
+<span class="nc" id="L82">		return &quot;Tree model&quot;;</span>
+	}
+
+	@Override
+	public BiMap&lt;String, Node&gt; getEntityRegistry(){
+
+<span class="fc bfc" id="L88" title="All 2 branches covered.">		if(this.entityRegistry == null){</span>
+<span class="fc" id="L89">			this.entityRegistry = getValue(TreeModelEvaluator.entityCache);</span>
+		}
+
+<span class="fc" id="L92">		return this.entityRegistry;</span>
+	}
+
+	@Override
+	public List&lt;Node&gt; getPath(String id){
+<span class="fc" id="L97">		return getPath(resolveNode(id));</span>
+	}
+
+	@Override
+	public List&lt;Node&gt; getPathBetween(String parentId, String childId){
+<span class="fc" id="L102">		return getPathBetween(resolveNode(parentId), resolveNode(childId));</span>
+	}
+
+	@Override
+	protected &lt;V extends Number&gt; Map&lt;FieldName, ?&gt; evaluateRegression(ValueFactory&lt;V&gt; valueFactory, EvaluationContext context){
+<span class="fc" id="L107">		TargetField targetField = getTargetField();</span>
+
+<span class="fc" id="L109">		Trail trail = new Trail();</span>
+
+<span class="fc" id="L111">		Node node = evaluateTree(trail, context);</span>
+<span class="fc bfc" id="L112" title="All 2 branches covered.">		if(node == null){</span>
+<span class="fc" id="L113">			return TargetUtil.evaluateRegressionDefault(valueFactory, targetField);</span>
+		}
+
+<span class="fc" id="L116">		NodeScore&lt;V&gt; result = createNodeScore(valueFactory, targetField, node);</span>
+
+<span class="fc" id="L118">		return TargetUtil.evaluateRegression(targetField, result);</span>
+	}
+
+	@Override
+	protected &lt;V extends Number&gt; Map&lt;FieldName, ?&gt; evaluateClassification(ValueFactory&lt;V&gt; valueFactory, EvaluationContext context){
+<span class="fc" id="L123">		TreeModel treeModel = getModel();</span>
+
+<span class="fc" id="L125">		TargetField targetField = getTargetField();</span>
+
+<span class="fc" id="L127">		Trail trail = new Trail();</span>
+
+<span class="fc" id="L129">		Node node = evaluateTree(trail, context);</span>
+<span class="fc bfc" id="L130" title="All 2 branches covered.">		if(node == null){</span>
+<span class="fc" id="L131">			return TargetUtil.evaluateClassificationDefault(valueFactory, targetField);</span>
+		} // End if
+
+<span class="fc bfc" id="L134" title="All 2 branches covered.">		if(!node.hasScoreDistributions()){</span>
+<span class="fc" id="L135">			NodeVote result = createNodeVote(node);</span>
+
+<span class="fc" id="L137">			return TargetUtil.evaluateVote(targetField, result);</span>
+		}
+
+<span class="fc" id="L140">		double missingValuePenalty = 1d;</span>
+
+<span class="fc" id="L142">		int missingLevels = trail.getMissingLevels();</span>
+<span class="fc bfc" id="L143" title="All 2 branches covered.">		if(missingLevels &gt; 0){</span>
+<span class="fc" id="L144">			missingValuePenalty = Math.pow(treeModel.getMissingValuePenalty(), missingLevels);</span>
+		}
+
+<span class="fc" id="L147">		NodeScoreDistribution&lt;V&gt; result = createNodeScoreDistribution(valueFactory, node, missingValuePenalty);</span>
+
+<span class="fc" id="L149">		return TargetUtil.evaluateClassification(targetField, result);</span>
+	}
+
+	private Node evaluateTree(Trail trail, EvaluationContext context){
+<span class="fc" id="L153">		TreeModel treeModel = getModel();</span>
+
+<span class="fc" id="L155">		Node root = treeModel.getNode();</span>
+
+<span class="fc" id="L157">		Boolean status = evaluateNode(trail, root, context);</span>
+
+<span class="pc bpc" id="L159" title="1 of 4 branches missed.">		if(status != null &amp;&amp; status.booleanValue()){</span>
+<span class="fc" id="L160">			trail = handleTrue(trail, root, context);</span>
+
+<span class="fc" id="L162">			Node node = trail.getResult();</span>
+
+			// &quot;It is not possible that the scoring process ends in a Node which does not have a score attribute&quot;
+<span class="pc bpc" id="L165" title="1 of 4 branches missed.">			if(node != null &amp;&amp; !node.hasScore()){</span>
+<span class="nc" id="L166">				throw new MissingAttributeException(node, PMMLAttributes.NODE_SCORE);</span>
+			}
+
+<span class="fc" id="L169">			return node;</span>
+		}
+
+<span class="fc" id="L172">		return null;</span>
+	}
+
+	private Boolean evaluateNode(Trail trail, Node node, EvaluationContext context){
+<span class="fc" id="L176">		EmbeddedModel embeddedModel = node.getEmbeddedModel();</span>
+<span class="pc bpc" id="L177" title="1 of 2 branches missed.">		if(embeddedModel != null){</span>
+<span class="nc" id="L178">			throw new UnsupportedElementException(embeddedModel);</span>
+		}
+
+<span class="fc" id="L181">		Predicate predicate = PredicateUtil.ensurePredicate(node);</span>
+
+		// A compound predicate whose boolean operator is &quot;surrogate&quot; represents a special case
+<span class="fc bfc" id="L184" title="All 2 branches covered.">		if(predicate instanceof CompoundPredicate){</span>
+<span class="fc" id="L185">			CompoundPredicate compoundPredicate = (CompoundPredicate)predicate;</span>
+
+<span class="fc" id="L187">			PredicateUtil.CompoundPredicateResult result = PredicateUtil.evaluateCompoundPredicateInternal(compoundPredicate, context);</span>
+<span class="fc bfc" id="L188" title="All 2 branches covered.">			if(result.isAlternative()){</span>
+<span class="fc" id="L189">				trail.addMissingLevel();</span>
+			}
+
+<span class="fc" id="L192">			return result.getResult();</span>
+		} else
+
+		{
+<span class="fc" id="L196">			return PredicateUtil.evaluate(predicate, context);</span>
+		}
+	}
+
+	private Trail handleTrue(Trail trail, Node node, EvaluationContext context){
+
+		// A &quot;true&quot; leaf node
+<span class="fc bfc" id="L203" title="All 2 branches covered.">		if(!node.hasNodes()){</span>
+<span class="fc" id="L204">			return trail.selectNode(node);</span>
+		}
+
+<span class="fc" id="L207">		trail.push(node);</span>
+
+<span class="fc" id="L209">		List&lt;Node&gt; children = node.getNodes();</span>
+<span class="fc bfc" id="L210" title="All 2 branches covered.">		for(int i = 0, max = children.size(); i &lt; max; i++){</span>
+<span class="fc" id="L211">			Node child = children.get(i);</span>
+
+<span class="fc" id="L213">			Boolean status = evaluateNode(trail, child, context);</span>
+
+<span class="fc bfc" id="L215" title="All 2 branches covered.">			if(status == null){</span>
+<span class="fc" id="L216">				Trail destination = handleMissingValue(trail, node, child, context);</span>
+
+<span class="pc bpc" id="L218" title="1 of 2 branches missed.">				if(destination != null){</span>
+<span class="fc" id="L219">					return destination;</span>
+				}
+<span class="nc" id="L221">			} else</span>
+
+<span class="fc bfc" id="L223" title="All 2 branches covered.">			if(status.booleanValue()){</span>
+<span class="fc" id="L224">				return handleTrue(trail, child, context);</span>
+			}
+		}
+
+		// A &quot;true&quot; non-leaf node
+<span class="fc" id="L229">		return handleNoTrueChild(trail);</span>
+	}
+
+	private Trail handleDefaultChild(Trail trail, Node node, EvaluationContext context){
+
+		// &quot;The defaultChild missing value strategy requires the presence of the defaultChild attribute in every non-leaf Node&quot;
+<span class="fc" id="L235">		Object defaultChild = node.getDefaultChild();</span>
+<span class="pc bpc" id="L236" title="1 of 2 branches missed.">		if(defaultChild == null){</span>
+<span class="nc" id="L237">			throw new MissingAttributeException(node, PMMLAttributes.NODE_DEFAULTCHILD);</span>
+		}
+
+<span class="fc" id="L240">		trail.addMissingLevel();</span>
+
+<span class="pc bpc" id="L242" title="1 of 2 branches missed.">		if(defaultChild instanceof Node){</span>
+<span class="nc" id="L243">			Node child = (Node)defaultChild;</span>
+
+<span class="nc" id="L245">			return handleTrue(trail, child, context);</span>
+		}
+
+<span class="fc" id="L248">		List&lt;Node&gt; children = node.getNodes();</span>
+<span class="pc bpc" id="L249" title="1 of 2 branches missed.">		for(int i = 0, max = children.size(); i &lt; max; i++){</span>
+<span class="fc" id="L250">			Node child = children.get(i);</span>
+
+<span class="fc" id="L252">			Object id = child.getId();</span>
+<span class="pc bpc" id="L253" title="2 of 4 branches missed.">			if(id != null &amp;&amp; (id).equals(defaultChild)){</span>
+				// The predicate of the referenced Node is not evaluated
+<span class="fc" id="L255">				return handleTrue(trail, child, context);</span>
+			}
+		}
+
+		// &quot;Only Nodes which are immediate children of the respective Node can be referenced&quot;
+<span class="nc" id="L260">		throw new InvalidAttributeException(node, PMMLAttributes.NODE_DEFAULTCHILD, defaultChild);</span>
+	}
+
+	private Trail handleNoTrueChild(Trail trail){
+<span class="fc" id="L264">		TreeModel treeModel = getModel();</span>
+
+<span class="fc" id="L266">		TreeModel.NoTrueChildStrategy noTrueChildStrategy = treeModel.getNoTrueChildStrategy();</span>
+<span class="pc bpc" id="L267" title="1 of 3 branches missed.">		switch(noTrueChildStrategy){</span>
+			case RETURN_NULL_PREDICTION:
+<span class="fc" id="L269">				return trail.selectNull();</span>
+			case RETURN_LAST_PREDICTION:
+<span class="fc" id="L271">				Node lastPrediction = trail.getLastPrediction();</span>
+
+				// &quot;Return the parent Node only if it specifies a score attribute&quot;
+<span class="fc bfc" id="L274" title="All 2 branches covered.">				if(lastPrediction.hasScore()){</span>
+<span class="fc" id="L275">					return trail.selectLastPrediction();</span>
+				}
+<span class="fc" id="L277">				return trail.selectNull();</span>
+			default:
+<span class="nc" id="L279">				throw new UnsupportedAttributeException(treeModel, noTrueChildStrategy);</span>
+		}
+	}
+
+	/**
+	 * @param parent The parent Node of the Node that evaluated to the missing value.
+	 * @param node The Node that evaluated to the missing value.
+	 */
+	private Trail handleMissingValue(Trail trail, Node parent, Node node, EvaluationContext context){
+<span class="fc" id="L288">		TreeModel treeModel = getModel();</span>
+
+<span class="fc" id="L290">		TreeModel.MissingValueStrategy missingValueStrategy = treeModel.getMissingValueStrategy();</span>
+<span class="pc bpc" id="L291" title="2 of 5 branches missed.">		switch(missingValueStrategy){</span>
+			case NULL_PREDICTION:
+<span class="fc" id="L293">				return trail.selectNull();</span>
+			case LAST_PREDICTION:
+<span class="fc" id="L295">				return trail.selectLastPrediction();</span>
+			case DEFAULT_CHILD:
+<span class="fc" id="L297">				return handleDefaultChild(trail, parent, context);</span>
+			case NONE:
+<span class="nc" id="L299">				return null;</span>
+			default:
+<span class="nc" id="L301">				throw new UnsupportedAttributeException(treeModel, missingValueStrategy);</span>
+		}
+	}
+
+	private &lt;V extends Number&gt; NodeScore&lt;V&gt; createNodeScore(ValueFactory&lt;V&gt; valueFactory, TargetField targetField, Node node){
+<span class="fc" id="L306">		Object score = node.getScore();</span>
+
+		Value&lt;V&gt; value;
+
+<span class="pc bpc" id="L310" title="1 of 2 branches missed.">		if(score instanceof Number){</span>
+<span class="fc" id="L311">			value = valueFactory.newValue((Number)score);</span>
+		} else
+
+		{
+<span class="nc" id="L315">			value = valueFactory.newValue((String)score);</span>
+		}
+
+<span class="fc" id="L318">		value = TargetUtil.evaluateRegressionInternal(targetField, value);</span>
+
+<span class="fc" id="L320">		NodeScore&lt;V&gt; result = new NodeScore&lt;V&gt;(value, node){</span>
+
+			@Override
+			public BiMap&lt;String, Node&gt; getEntityRegistry(){
+<span class="nc" id="L324">				return TreeModelEvaluator.this.getEntityRegistry();</span>
+			}
+
+			@Override
+			public List&lt;Node&gt; getDecisionPath(){
+<span class="nc" id="L329">				return TreeModelEvaluator.this.getPath(getNode());</span>
+			}
+		};
+
+<span class="fc" id="L333">		return result;</span>
+	}
+
+	private NodeVote createNodeVote(Node node){
+<span class="fc" id="L337">		NodeVote result = new NodeVote(node){</span>
+
+			@Override
+			public BiMap&lt;String, Node&gt; getEntityRegistry(){
+<span class="fc" id="L341">				return TreeModelEvaluator.this.getEntityRegistry();</span>
+			}
+
+			@Override
+			public List&lt;Node&gt; getDecisionPath(){
+<span class="nc" id="L346">				return TreeModelEvaluator.this.getPath(getNode());</span>
+			}
+		};
+
+<span class="fc" id="L350">		return result;</span>
+	}
+
+	private &lt;V extends Number&gt; NodeScoreDistribution&lt;V&gt; createNodeScoreDistribution(ValueFactory&lt;V&gt; valueFactory, Node node, double missingValuePenalty){
+<span class="fc" id="L354">		List&lt;ScoreDistribution&gt; scoreDistributions = node.getScoreDistributions();</span>
+
+<span class="fc" id="L356">		NodeScoreDistribution&lt;V&gt; result = new NodeScoreDistribution&lt;V&gt;(new ValueMap&lt;String, V&gt;(2 * scoreDistributions.size()), node){</span>
+
+			@Override
+			public BiMap&lt;String, Node&gt; getEntityRegistry(){
+<span class="fc" id="L360">				return TreeModelEvaluator.this.getEntityRegistry();</span>
+			}
+
+			@Override
+			public List&lt;Node&gt; getDecisionPath(){
+<span class="nc" id="L365">				return TreeModelEvaluator.this.getPath(getNode());</span>
+			}
+		};
+
+<span class="fc" id="L369">		Value&lt;V&gt; sum = valueFactory.newValue();</span>
+
+		// &quot;If the predicted probability is defined for any class label, then it must be defined for all&quot;
+<span class="fc" id="L372">		boolean hasProbabilities = false;</span>
+
+<span class="fc bfc" id="L374" title="All 2 branches covered.">		for(int i = 0, max = scoreDistributions.size(); i &lt; max; i++){</span>
+<span class="fc" id="L375">			ScoreDistribution scoreDistribution = scoreDistributions.get(i);</span>
+
+<span class="fc" id="L377">			Double probability = scoreDistribution.getProbability();</span>
+
+<span class="fc bfc" id="L379" title="All 2 branches covered.">			if(i == 0){</span>
+<span class="fc bfc" id="L380" title="All 2 branches covered.">				hasProbabilities = (probability != null);</span>
+			}
+
+			Value&lt;V&gt; value;
+
+<span class="fc bfc" id="L385" title="All 2 branches covered.">			if(hasProbabilities){</span>
+
+<span class="pc bpc" id="L387" title="1 of 2 branches missed.">				if(probability == null){</span>
+<span class="nc" id="L388">					throw new MissingAttributeException(scoreDistribution, PMMLAttributes.SCOREDISTRIBUTION_PROBABILITY);</span>
+				} // End if
+
+<span class="pc bpc" id="L391" title="2 of 4 branches missed.">				if(probability &lt; 0d || probability &gt; 1d){</span>
+<span class="nc" id="L392">					throw new InvalidAttributeException(scoreDistribution, PMMLAttributes.SCOREDISTRIBUTION_PROBABILITY, probability);</span>
+				}
+
+<span class="fc" id="L395">				sum.add(probability);</span>
+
+<span class="fc" id="L397">				value = valueFactory.newValue(probability);</span>
+			} else
+
+			{
+<span class="pc bpc" id="L401" title="1 of 2 branches missed.">				if(probability != null){</span>
+<span class="nc" id="L402">					throw new MisplacedAttributeException(scoreDistribution, PMMLAttributes.SCOREDISTRIBUTION_PROBABILITY, probability);</span>
+				}
+
+<span class="fc" id="L405">				double recordCount = scoreDistribution.getRecordCount();</span>
+<span class="fc bfc" id="L406" title="All 2 branches covered.">				if(recordCount != 0d){</span>
+<span class="fc" id="L407">					sum.add(recordCount);</span>
+				}
+
+<span class="fc" id="L410">				value = valueFactory.newValue(recordCount);</span>
+			}
+
+<span class="fc" id="L413">			Object targetCategory = scoreDistribution.getValue();</span>
+<span class="pc bpc" id="L414" title="1 of 2 branches missed.">			if(targetCategory == null){</span>
+<span class="nc" id="L415">				throw new MissingAttributeException(scoreDistribution, PMMLAttributes.SCOREDISTRIBUTION_VALUE);</span>
+			}
+
+<span class="fc" id="L418">			targetCategory = TypeUtil.format(targetCategory);</span>
+
+<span class="fc" id="L420">			result.put((String)targetCategory, value);</span>
+
+<span class="fc" id="L422">			Double confidence = scoreDistribution.getConfidence();</span>
+<span class="fc bfc" id="L423" title="All 2 branches covered.">			if(confidence != null){</span>
+<span class="fc" id="L424">				value = valueFactory.newValue(confidence);</span>
+
+<span class="fc bfc" id="L426" title="All 2 branches covered.">				if(missingValuePenalty != 1d){</span>
+<span class="fc" id="L427">					value.multiply(missingValuePenalty);</span>
+				}
+
+<span class="fc" id="L430">				result.putConfidence(TypeUtil.format(targetCategory), value);</span>
+			}
+		}
+
+		// &quot;The predicted probabilities must sum to 1&quot;
+<span class="fc bfc" id="L435" title="All 2 branches covered.">		if(!sum.equals(1d)){</span>
+<span class="fc" id="L436">			ValueMap&lt;String, V&gt; values = result.getValues();</span>
+
+<span class="pc bpc" id="L438" title="1 of 2 branches missed.">			if(sum.equals(0d)){</span>
+<span class="nc" id="L439">				throw new UndefinedResultException();</span>
+			}
+
+<span class="fc bfc" id="L442" title="All 2 branches covered.">			for(Value&lt;V&gt; value : values){</span>
+<span class="fc" id="L443">				value.divide(sum);</span>
+<span class="fc" id="L444">			}</span>
+		}
+
+<span class="fc" id="L447">		return result;</span>
+	}
+
+	private List&lt;Node&gt; getPath(Node node){
+<span class="fc" id="L451">		TreeModel treeModel = getModel();</span>
+
+<span class="fc" id="L453">		Node root = treeModel.getNode();</span>
+
+<span class="fc" id="L455">		return getPathBetween(root, node);</span>
+	}
+
+	private List&lt;Node&gt; getPathBetween(Node parent, Node child){
+<span class="fc" id="L459">		PathFinder pathFinder = new PathFinder(){</span>
+
+			@Override
+			public boolean test(Node node){
+<span class="fc" id="L463">				return Objects.equals(child, node);</span>
+			}
+		};
+<span class="fc" id="L466">		pathFinder.applyTo(parent);</span>
+
+<span class="fc" id="L468">		return pathFinder.getPath();</span>
+	}
+
+	private Node resolveNode(String id){
+<span class="fc" id="L472">		BiMap&lt;String, Node&gt; entityRegistry = getEntityRegistry();</span>
+
+<span class="fc" id="L474">		Node node = entityRegistry.get(id);</span>
+<span class="pc bpc" id="L475" title="1 of 2 branches missed.">		if(node == null){</span>
+<span class="nc" id="L476">			throw new IllegalArgumentException(id);</span>
+		}
+
+<span class="fc" id="L479">		return node;</span>
+	}
+
+	static
+	private class Trail {
+
+<span class="fc" id="L485">		private Node lastPrediction = null;</span>
+
+<span class="fc" id="L487">		private Node result = null;</span>
+
+<span class="fc" id="L489">		private int missingLevels = 0;</span>
+
+
+<span class="fc" id="L492">		public Trail(){</span>
+<span class="fc" id="L493">		}</span>
+
+		public void push(Node node){
+<span class="fc" id="L496">			setLastPrediction(node);</span>
+<span class="fc" id="L497">		}</span>
+
+		public Trail selectNull(){
+<span class="fc" id="L500">			setResult(null);</span>
+
+<span class="fc" id="L502">			return this;</span>
+		}
+
+		public Trail selectNode(Node node){
+<span class="fc" id="L506">			setResult(node);</span>
+
+<span class="fc" id="L508">			return this;</span>
+		}
+
+		public Trail selectLastPrediction(){
+<span class="fc" id="L512">			setResult(getLastPrediction());</span>
+
+<span class="fc" id="L514">			return this;</span>
+		}
+
+		public Node getResult(){
+<span class="fc" id="L518">			return this.result;</span>
+		}
+
+		private void setResult(Node result){
+<span class="fc" id="L522">			this.result = result;</span>
+<span class="fc" id="L523">		}</span>
+
+		public Node getLastPrediction(){
+
+<span class="pc bpc" id="L527" title="1 of 2 branches missed.">			if(this.lastPrediction == null){</span>
+<span class="nc" id="L528">				throw new EvaluationException(&quot;Empty trail&quot;);</span>
+			}
+
+<span class="fc" id="L531">			return this.lastPrediction;</span>
+		}
+
+		private void setLastPrediction(Node lastPrediction){
+<span class="fc" id="L535">			this.lastPrediction = lastPrediction;</span>
+<span class="fc" id="L536">		}</span>
+
+		public void addMissingLevel(){
+<span class="fc" id="L539">			setMissingLevels(getMissingLevels() + 1);</span>
+<span class="fc" id="L540">		}</span>
+
+		public int getMissingLevels(){
+<span class="fc" id="L543">			return this.missingLevels;</span>
+		}
+
+		private void setMissingLevels(int missingLevels){
+<span class="fc" id="L547">			this.missingLevels = missingLevels;</span>
+<span class="fc" id="L548">		}</span>
+	}
+
+<span class="fc" id="L551">	private static final LoadingCache&lt;TreeModel, BiMap&lt;String, Node&gt;&gt; entityCache = CacheUtil.buildLoadingCache(new CacheLoader&lt;TreeModel, BiMap&lt;String, Node&gt;&gt;(){</span>
+
+		@Override
+		public BiMap&lt;String, Node&gt; load(TreeModel treeModel){
+<span class="fc" id="L555">			ImmutableBiMap.Builder&lt;String, Node&gt; builder = new ImmutableBiMap.Builder&lt;&gt;();</span>
+
+<span class="fc" id="L557">			builder = collectNodes(treeModel.getNode(), new AtomicInteger(1), builder);</span>
+
+<span class="fc" id="L559">			return builder.build();</span>
+		}
+
+		private ImmutableBiMap.Builder&lt;String, Node&gt; collectNodes(Node node, AtomicInteger index, ImmutableBiMap.Builder&lt;String, Node&gt; builder){
+<span class="fc" id="L563">			builder = EntityUtil.put(node, index, builder);</span>
+
+<span class="fc bfc" id="L565" title="All 2 branches covered.">			if(!node.hasNodes()){</span>
+<span class="fc" id="L566">				return builder;</span>
+			}
+
+<span class="fc" id="L569">			List&lt;Node&gt; children = node.getNodes();</span>
+<span class="fc bfc" id="L570" title="All 2 branches covered.">			for(Node child : children){</span>
+<span class="fc" id="L571">				builder = collectNodes(child, index, builder);</span>
+<span class="fc" id="L572">			}</span>
+
+<span class="fc" id="L574">			return builder;</span>
+		}
+	});
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.0.201801022044</span></div></body></html>

@@ -1,0 +1,85 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>Regression.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">JPMML evaluator</a> &gt; <a href="index.source.html" class="el_package">org.jpmml.evaluator</a> &gt; <span class="el_source">Regression.java</span></div><h1>Regression.java</h1><pre class="source lang-java linenums">/*
+ * Copyright (c) 2017 Villu Ruusmann
+ *
+ * This file is part of JPMML-Evaluator
+ *
+ * JPMML-Evaluator is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Affero General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * JPMML-Evaluator is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Affero General Public License for more details.
+ *
+ * You should have received a copy of the GNU Affero General Public License
+ * along with JPMML-Evaluator.  If not, see &lt;http://www.gnu.org/licenses/&gt;.
+ */
+package org.jpmml.evaluator;
+
+import org.dmg.pmml.DataType;
+import org.dmg.pmml.MiningFunction;
+
+/**
+ * @see MiningFunction#REGRESSION
+ */
+public class Regression&lt;V extends Number&gt; extends AbstractComputable implements HasPrediction {
+
+<span class="fc" id="L29">	private Value&lt;V&gt; value = null;</span>
+
+<span class="fc" id="L31">	private Object result = null;</span>
+
+
+<span class="fc" id="L34">	protected Regression(Value&lt;V&gt; value){</span>
+<span class="fc" id="L35">		setValue(value);</span>
+<span class="fc" id="L36">	}</span>
+
+	@Override
+	public Object getResult(){
+
+<span class="pc bpc" id="L41" title="1 of 2 branches missed.">		if(this.result == null){</span>
+<span class="nc" id="L42">			throw new EvaluationException(&quot;Regression result has not been computed&quot;);</span>
+		}
+
+<span class="fc" id="L45">		return this.result;</span>
+	}
+
+	protected void setResult(Object result){
+<span class="fc" id="L49">		this.result = result;</span>
+<span class="fc" id="L50">	}</span>
+
+	protected void computeResult(DataType dataType){
+<span class="fc" id="L53">		Value&lt;V&gt; value = getValue();</span>
+
+<span class="fc" id="L55">		Object result = TypeUtil.cast(dataType, value.getValue());</span>
+
+<span class="fc" id="L57">		setResult(result);</span>
+<span class="fc" id="L58">	}</span>
+
+	@Override
+	public Object getPrediction(){
+<span class="nc" id="L62">		return getResult();</span>
+	}
+
+	@Override
+	public Report getPredictionReport(){
+<span class="fc" id="L67">		Value&lt;V&gt; value = getValue();</span>
+
+<span class="fc" id="L69">		return ReportUtil.getReport(value);</span>
+	}
+
+	public Value&lt;V&gt; getValue(){
+<span class="fc" id="L73">		return this.value;</span>
+	}
+
+	private void setValue(Value&lt;V&gt; value){
+
+<span class="pc bpc" id="L78" title="1 of 2 branches missed.">		if(value == null){</span>
+<span class="nc" id="L79">			throw new IllegalArgumentException();</span>
+		}
+
+<span class="fc" id="L82">		this.value = value;</span>
+<span class="fc" id="L83">	}</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.2.201808211720</span></div></body></html>

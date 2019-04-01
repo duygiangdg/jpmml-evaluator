@@ -528,3 +528,4 @@ JPMML-Evaluator is dual-licensed under the [GNU Affero General Public License (A
 JPMML-Evaluator is developed and maintained by Openscoring Ltd, Estonia.
 
 Interested in using JPMML software in your application? Please contact [info@openscoring.io](mailto:info@openscoring.io)
+"# jpmml-evaluator" 

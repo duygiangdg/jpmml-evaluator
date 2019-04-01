@@ -1,0 +1,549 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>AssociationModelEvaluator.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">PMML class model evaluator code coverage</a> &gt; <a href="index.source.html" class="el_package">org.jpmml.evaluator.association</a> &gt; <span class="el_source">AssociationModelEvaluator.java</span></div><h1>AssociationModelEvaluator.java</h1><pre class="source lang-java linenums">/*
+ * Copyright (c) 2013 Villu Ruusmann
+ *
+ * This file is part of JPMML-Evaluator
+ *
+ * JPMML-Evaluator is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Affero General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * JPMML-Evaluator is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Affero General Public License for more details.
+ *
+ * You should have received a copy of the GNU Affero General Public License
+ * along with JPMML-Evaluator.  If not, see &lt;http://www.gnu.org/licenses/&gt;.
+ */
+package org.jpmml.evaluator.association;
+
+import java.util.ArrayList;
+import java.util.BitSet;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.Callable;
+
+import com.google.common.cache.Cache;
+import com.google.common.cache.CacheLoader;
+import com.google.common.cache.LoadingCache;
+import com.google.common.collect.BiMap;
+import com.google.common.collect.ImmutableList;
+import org.dmg.pmml.DataType;
+import org.dmg.pmml.Field;
+import org.dmg.pmml.FieldName;
+import org.dmg.pmml.MiningField;
+import org.dmg.pmml.PMML;
+import org.dmg.pmml.Target;
+import org.dmg.pmml.Targets;
+import org.dmg.pmml.association.AssociationModel;
+import org.dmg.pmml.association.AssociationRule;
+import org.dmg.pmml.association.Item;
+import org.dmg.pmml.association.ItemRef;
+import org.dmg.pmml.association.Itemset;
+import org.jpmml.evaluator.CacheUtil;
+import org.jpmml.evaluator.EntityUtil;
+import org.jpmml.evaluator.EvaluationContext;
+import org.jpmml.evaluator.EvaluationException;
+import org.jpmml.evaluator.Evaluator;
+import org.jpmml.evaluator.FieldValue;
+import org.jpmml.evaluator.FieldValueUtil;
+import org.jpmml.evaluator.FieldValues;
+import org.jpmml.evaluator.HasEntityRegistry;
+import org.jpmml.evaluator.HasGroupFields;
+import org.jpmml.evaluator.IndexableUtil;
+import org.jpmml.evaluator.InputField;
+import org.jpmml.evaluator.InvalidAttributeException;
+import org.jpmml.evaluator.MisplacedElementException;
+import org.jpmml.evaluator.MissingAttributeException;
+import org.jpmml.evaluator.MissingValueException;
+import org.jpmml.evaluator.ModelEvaluator;
+import org.jpmml.evaluator.PMMLAttributes;
+import org.jpmml.evaluator.PMMLException;
+import org.jpmml.evaluator.PMMLUtil;
+import org.jpmml.evaluator.TargetField;
+import org.jpmml.evaluator.TypeInfos;
+import org.jpmml.evaluator.ValueFactory;
+
+public class AssociationModelEvaluator extends ModelEvaluator&lt;AssociationModel&gt; implements HasGroupFields, HasEntityRegistry&lt;AssociationRule&gt; {
+
+<span class="fc" id="L75">	transient</span>
+	private List&lt;InputField&gt; groupInputFields = null;
+
+<span class="fc" id="L78">	transient</span>
+	private BiMap&lt;String, AssociationRule&gt; entityRegistry = null;
+
+<span class="fc" id="L81">	transient</span>
+	private Map&lt;String, Item&gt; items = null;
+
+<span class="fc" id="L84">	transient</span>
+	private Map&lt;String, Itemset&gt; itemsets = null;
+
+<span class="fc" id="L87">	transient</span>
+	private List&lt;ItemValue&gt; itemValues = null;
+
+
+	public AssociationModelEvaluator(PMML pmml){
+<span class="nc" id="L92">		this(pmml, PMMLUtil.findModel(pmml, AssociationModel.class));</span>
+<span class="nc" id="L93">	}</span>
+
+	public AssociationModelEvaluator(PMML pmml, AssociationModel associationModel){
+<span class="fc" id="L96">		super(pmml, associationModel);</span>
+
+<span class="fc" id="L98">		Targets targets = associationModel.getTargets();</span>
+<span class="pc bpc" id="L99" title="1 of 2 branches missed.">		if(targets != null){</span>
+<span class="nc" id="L100">			throw new MisplacedElementException(targets);</span>
+		}
+<span class="fc" id="L102">	}</span>
+
+	@Override
+	public String getSummary(){
+<span class="nc" id="L106">		return &quot;Association rules&quot;;</span>
+	}
+
+	@Override
+	public List&lt;InputField&gt; getGroupFields(){
+
+<span class="fc bfc" id="L112" title="All 2 branches covered.">		if(this.groupInputFields == null){</span>
+<span class="fc" id="L113">			this.groupInputFields = createInputFields(MiningField.UsageType.GROUP);</span>
+		}
+
+<span class="fc" id="L116">		return this.groupInputFields;</span>
+	}
+
+	/**
+	 * @return &lt;code&gt;null&lt;/code&gt; Always.
+	 */
+	@Override
+	public Target getTarget(FieldName name){
+<span class="nc" id="L124">		return null;</span>
+	}
+
+	@Override
+	public FieldName getTargetName(){
+<span class="fc" id="L129">		return Evaluator.DEFAULT_TARGET_NAME;</span>
+	}
+
+	@Override
+	public BiMap&lt;String, AssociationRule&gt; getEntityRegistry(){
+
+<span class="fc bfc" id="L135" title="All 2 branches covered.">		if(this.entityRegistry == null){</span>
+<span class="fc" id="L136">			this.entityRegistry = getValue(AssociationModelEvaluator.entityCache);</span>
+		}
+
+<span class="fc" id="L139">		return this.entityRegistry;</span>
+	}
+
+	@Override
+	protected List&lt;TargetField&gt; createTargetFields(){
+<span class="fc" id="L144">		List&lt;TargetField&gt; targetFields = super.createTargetFields();</span>
+
+<span class="pc bpc" id="L146" title="1 of 2 branches missed.">		if(targetFields.size() &gt; 0){</span>
+<span class="nc" id="L147">			throw createMiningSchemaException(&quot;Expected 0 target fields, got &quot; + targetFields.size() + &quot; target fields&quot;);</span>
+		}
+
+<span class="fc" id="L150">		return targetFields;</span>
+	}
+
+	@Override
+	protected &lt;V extends Number&gt; Map&lt;FieldName, Association&gt; evaluateAssociationRules(ValueFactory&lt;V&gt; valueFactory, EvaluationContext context){
+<span class="fc" id="L155">		AssociationModel associationModel = getModel();</span>
+
+<span class="fc" id="L157">		Set&lt;String&gt; activeItems = getActiveItemIds(context);</span>
+
+<span class="fc" id="L159">		Map&lt;String, Boolean&gt; flags = new HashMap&lt;&gt;();</span>
+
+<span class="fc" id="L161">		List&lt;Itemset&gt; itemsets = associationModel.getItemsets();</span>
+<span class="fc bfc" id="L162" title="All 2 branches covered.">		for(Itemset itemset : itemsets){</span>
+<span class="fc" id="L163">			flags.put(itemset.getId(), isSubset(activeItems, itemset));</span>
+<span class="fc" id="L164">		}</span>
+
+<span class="fc" id="L166">		List&lt;AssociationRule&gt; associationRules = associationModel.getAssociationRules();</span>
+
+<span class="fc" id="L168">		BitSet antecedentFlags = new BitSet(associationRules.size());</span>
+<span class="fc" id="L169">		BitSet consequentFlags = new BitSet(associationRules.size());</span>
+
+<span class="fc bfc" id="L171" title="All 2 branches covered.">		for(int i = 0; i &lt; associationRules.size(); i++){</span>
+<span class="fc" id="L172">			AssociationRule associationRule = associationRules.get(i);</span>
+
+<span class="fc" id="L174">			String antecedent = associationRule.getAntecedent();</span>
+<span class="pc bpc" id="L175" title="1 of 2 branches missed.">			if(antecedent == null){</span>
+<span class="nc" id="L176">				throw new MissingAttributeException(associationRule, PMMLAttributes.ASSOCIATIONRULE_ANTECEDENT);</span>
+			}
+
+<span class="fc" id="L179">			Boolean antecedentFlag = flags.get(antecedent);</span>
+<span class="pc bpc" id="L180" title="1 of 2 branches missed.">			if(antecedentFlag == null){</span>
+<span class="nc" id="L181">				throw new InvalidAttributeException(associationRule, PMMLAttributes.ASSOCIATIONRULE_ANTECEDENT, antecedent);</span>
+			}
+
+<span class="fc" id="L184">			antecedentFlags.set(i, antecedentFlag);</span>
+
+<span class="fc" id="L186">			String consequent = associationRule.getConsequent();</span>
+<span class="pc bpc" id="L187" title="1 of 2 branches missed.">			if(consequent == null){</span>
+<span class="nc" id="L188">				throw new MissingAttributeException(associationRule, PMMLAttributes.ASSOCIATIONRULE_CONSEQUENT);</span>
+			}
+
+<span class="fc" id="L191">			Boolean consequentFlag = flags.get(consequent);</span>
+<span class="pc bpc" id="L192" title="1 of 2 branches missed.">			if(consequentFlag == null){</span>
+<span class="nc" id="L193">				throw new InvalidAttributeException(associationRule, PMMLAttributes.ASSOCIATIONRULE_CONSEQUENT, consequent);</span>
+			}
+
+<span class="fc" id="L196">			consequentFlags.set(i, consequentFlag);</span>
+		}
+
+<span class="fc" id="L199">		Association association = new Association(associationRules, antecedentFlags, consequentFlags){</span>
+
+			@Override
+			public Map&lt;String, Item&gt; getItems(){
+<span class="fc" id="L203">				return AssociationModelEvaluator.this.getItems();</span>
+			}
+
+			@Override
+			public Map&lt;String, Itemset&gt; getItemsets(){
+<span class="fc" id="L208">				return AssociationModelEvaluator.this.getItemsets();</span>
+			}
+
+			@Override
+			public BiMap&lt;String, AssociationRule&gt; getEntityRegistry(){
+<span class="fc" id="L213">				return AssociationModelEvaluator.this.getEntityRegistry();</span>
+			}
+		};
+
+<span class="fc" id="L217">		return Collections.singletonMap(getTargetName(), association);</span>
+	}
+
+	/**
+	 * @return A set of {@link Item#getId() Item identifiers}.
+	 */
+	Set&lt;String&gt; getActiveItemIds(EvaluationContext context){
+<span class="fc" id="L224">		AssociationModel associationModel = getModel();</span>
+
+<span class="fc" id="L226">		List&lt;InputField&gt; activeFields = getActiveFields();</span>
+<span class="fc" id="L227">		List&lt;InputField&gt; groupFields = getGroupFields();</span>
+
+<span class="fc" id="L229">		Set&lt;String&gt; result = new HashSet&lt;&gt;();</span>
+
+<span class="fc" id="L231">		Map&lt;FieldName, Set&lt;FieldValue&gt;&gt; explodedValues = null;</span>
+
+<span class="fc" id="L233">		List&lt;ItemValue&gt; itemValues = getItemValues();</span>
+<span class="fc bfc" id="L234" title="All 2 branches covered.">		for(ItemValue itemValue : itemValues){</span>
+<span class="fc" id="L235">			String id = itemValue.getId();</span>
+<span class="fc" id="L236">			FieldName name = itemValue.getField();</span>
+<span class="fc" id="L237">			String category = itemValue.getCategory();</span>
+
+<span class="fc" id="L239">			FieldValue value = context.evaluate(name);</span>
+
+<span class="fc bfc" id="L241" title="All 2 branches covered.">			if(groupFields.size() == 0){</span>
+
+<span class="fc bfc" id="L243" title="All 2 branches covered.">				if(FieldValueUtil.isMissing(value)){</span>
+<span class="fc" id="L244">					continue;</span>
+				} // End if
+
+				// &quot;The item values are based on field names when the field has only true/false values&quot;
+<span class="fc bfc" id="L248" title="All 2 branches covered.">				if(category == null){</span>
+<span class="fc" id="L249">					DataType dataType = value.getDataType();</span>
+
+<span class="pc bfc" id="L251" title="All 2 branches covered.">					switch(dataType){</span>
+						case STRING:
+<span class="fc bfc" id="L253" title="All 2 branches covered.">							if((AssociationModelEvaluator.STRING_TRUE).equalsValue(value)){</span>
+<span class="fc" id="L254">								result.add(id);</span>
+
+<span class="fc" id="L256">								break;</span>
+							} else
+
+<span class="fc bfc" id="L259" title="All 2 branches covered.">							if((AssociationModelEvaluator.STRING_FALSE).equalsValue(value)){</span>
+<span class="fc" id="L260">								break;</span>
+							}
+							// Falls through
+						default:
+<span class="fc bfc" id="L264" title="All 2 branches covered.">							if((AssociationModelEvaluator.BOOLEAN_TRUE).equalsValue(value)){</span>
+<span class="fc" id="L265">								result.add(id);</span>
+
+<span class="fc" id="L267">								break;</span>
+							} else
+
+<span class="pc bpc" id="L270" title="1 of 2 branches missed.">							if((AssociationModelEvaluator.BOOLEAN_FALSE).equalsValue(value)){</span>
+<span class="fc" id="L271">								break;</span>
+							}
+
+<span class="nc" id="L274">							throw new EvaluationException(&quot;Expected &quot; + PMMLException.formatValue(FieldValues.CATEGORICAL_BOOLEAN_FALSE) + &quot; or &quot; + PMMLException.formatValue(FieldValues.CATEGORICAL_BOOLEAN_TRUE) + &quot;, got &quot; + PMMLException.formatValue(value));</span>
+					}
+<span class="fc" id="L276">				} else</span>
+
+				{
+<span class="fc bfc" id="L279" title="All 2 branches covered.">					if(value.equalsValue(category)){</span>
+<span class="fc" id="L280">						result.add(id);</span>
+					}
+				}
+			} else
+
+<span class="pc bpc" id="L285" title="1 of 2 branches missed.">			if(groupFields.size() == 1){</span>
+
+<span class="pc bpc" id="L287" title="1 of 2 branches missed.">				if(FieldValueUtil.isMissing(value)){</span>
+<span class="nc" id="L288">					throw new MissingValueException(name);</span>
+				} // End if
+
+<span class="fc bfc" id="L291" title="All 2 branches covered.">				if(explodedValues == null){</span>
+<span class="fc" id="L292">					explodedValues = new HashMap&lt;&gt;();</span>
+				}
+
+<span class="fc" id="L295">				Set&lt;FieldValue&gt; explodedValue = explodedValues.get(name);</span>
+<span class="pc bpc" id="L296" title="1 of 2 branches missed.">				if(explodedValue == null){</span>
+<span class="fc" id="L297">					explodedValue = new HashSet&lt;&gt;();</span>
+
+<span class="fc" id="L299">					Collection&lt;?&gt; objects = value.asCollection();</span>
+<span class="fc bfc" id="L300" title="All 2 branches covered.">					for(Object object : objects){</span>
+<span class="fc" id="L301">						explodedValue.add(FieldValueUtil.create(value, object));</span>
+<span class="fc" id="L302">					}</span>
+				} // End if
+
+<span class="pc bpc" id="L305" title="1 of 2 branches missed.">				if(category == null){</span>
+<span class="nc" id="L306">					throw new IllegalStateException();</span>
+				} else
+
+				{
+<span class="fc" id="L310">					FieldValue categoryValue = FieldValueUtil.create(value, category);</span>
+
+<span class="fc bfc" id="L312" title="All 2 branches covered.">					if(explodedValue.contains(categoryValue)){</span>
+<span class="fc" id="L313">						result.add(id);</span>
+					}
+				}
+<span class="fc" id="L316">			} else</span>
+
+			{
+<span class="nc" id="L319">				throw createMiningSchemaException(&quot;Expected 0 or 1 group field(s), got &quot; + groupFields.size() + &quot; group fields&quot;);</span>
+			}
+<span class="fc" id="L321">		}</span>
+
+<span class="fc" id="L323">		return result;</span>
+	}
+
+	static
+	private boolean isSubset(Set&lt;String&gt; items, Itemset itemset){
+<span class="fc" id="L328">		boolean result = true;</span>
+
+<span class="fc" id="L330">		List&lt;ItemRef&gt; itemRefs = itemset.getItemRefs();</span>
+<span class="fc bfc" id="L331" title="All 2 branches covered.">		for(ItemRef itemRef : itemRefs){</span>
+<span class="fc" id="L332">			result &amp;= items.contains(itemRef.getItemRef());</span>
+
+<span class="fc bfc" id="L334" title="All 2 branches covered.">			if(!result){</span>
+<span class="fc" id="L335">				return false;</span>
+			}
+<span class="fc" id="L337">		}</span>
+
+<span class="fc" id="L339">		return result;</span>
+	}
+
+	private Map&lt;String, Item&gt; getItems(){
+
+<span class="fc bfc" id="L344" title="All 2 branches covered.">		if(this.items == null){</span>
+<span class="fc" id="L345">			this.items = getValue(AssociationModelEvaluator.itemCache);</span>
+		}
+
+<span class="fc" id="L348">		return this.items;</span>
+	}
+
+	private Map&lt;String, Itemset&gt; getItemsets(){
+
+<span class="fc bfc" id="L353" title="All 2 branches covered.">		if(this.itemsets == null){</span>
+<span class="fc" id="L354">			this.itemsets = getValue(AssociationModelEvaluator.itemsetCache);</span>
+		}
+
+<span class="fc" id="L357">		return this.itemsets;</span>
+	}
+
+	private List&lt;ItemValue&gt; getItemValues(){
+
+<span class="fc bfc" id="L362" title="All 2 branches covered.">		if(this.itemValues == null){</span>
+<span class="fc" id="L363">			this.itemValues = getValue(AssociationModelEvaluator.itemValueCache, createItemValueLoader(this));</span>
+		}
+
+<span class="fc" id="L366">		return this.itemValues;</span>
+	}
+
+	static
+	private Callable&lt;List&lt;ItemValue&gt;&gt; createItemValueLoader(AssociationModelEvaluator modelEvaluator){
+<span class="fc" id="L371">		return new Callable&lt;List&lt;ItemValue&gt;&gt;(){</span>
+
+			@Override
+			public List&lt;ItemValue&gt; call(){
+<span class="fc" id="L375">				return parseItemValues(modelEvaluator);</span>
+			}
+		};
+	}
+
+	static
+	private List&lt;ItemValue&gt; parseItemValues(AssociationModelEvaluator modelEvaluator){
+<span class="fc" id="L382">		AssociationModel associationModel = modelEvaluator.getModel();</span>
+
+<span class="fc" id="L384">		List&lt;InputField&gt; activeFields = modelEvaluator.getActiveFields();</span>
+<span class="fc" id="L385">		List&lt;InputField&gt; groupFields = modelEvaluator.getGroupFields();</span>
+
+<span class="fc" id="L387">		List&lt;ItemValue&gt; result = new ArrayList&lt;&gt;();</span>
+
+<span class="fc" id="L389">		List&lt;Item&gt; items = associationModel.getItems();</span>
+<span class="fc bfc" id="L390" title="All 2 branches covered.">		for(Item item : items){</span>
+<span class="fc" id="L391">			String id = item.getId();</span>
+<span class="pc bpc" id="L392" title="1 of 2 branches missed.">			if(id == null){</span>
+<span class="nc" id="L393">				throw new MissingAttributeException(item, PMMLAttributes.ITEM_ID);</span>
+			}
+
+<span class="fc" id="L396">			String value = item.getValue();</span>
+<span class="pc bpc" id="L397" title="1 of 2 branches missed.">			if(value == null){</span>
+<span class="nc" id="L398">				throw new MissingAttributeException(item, PMMLAttributes.ITEM_VALUE);</span>
+			}
+
+<span class="fc" id="L401">			FieldName name = item.getField();</span>
+<span class="fc" id="L402">			String category = item.getCategory();</span>
+
+			parser:
+<span class="pc bpc" id="L405" title="1 of 2 branches missed.">			if(name == null){</span>
+
+				// Categorical data style: no group fields, one or more active fields
+<span class="fc bfc" id="L408" title="All 2 branches covered.">				if(groupFields.size() == 0){</span>
+
+<span class="pc bpc" id="L410" title="1 of 2 branches missed.">					if(activeFields.size() &lt; 1){</span>
+<span class="nc" id="L411">						throw modelEvaluator.createMiningSchemaException(&quot;Expected 1 or more active field(s), got &quot; + activeFields.size() + &quot; active fields&quot;);</span>
+					}
+
+<span class="fc" id="L414">					name = FieldName.create(value);</span>
+<span class="fc" id="L415">					category = null;</span>
+
+<span class="fc" id="L417">					Field&lt;?&gt; field = modelEvaluator.resolveField(name);</span>
+<span class="fc bfc" id="L418" title="All 2 branches covered.">					if(field != null){</span>
+<span class="fc" id="L419">						break parser;</span>
+					}
+
+<span class="fc" id="L422">					int index = value.indexOf('=');</span>
+<span class="pc bpc" id="L423" title="1 of 2 branches missed.">					if(index &gt; -1){</span>
+<span class="fc" id="L424">						name = FieldName.create(value.substring(0, index));</span>
+<span class="fc" id="L425">						category = value.substring(index + 1);</span>
+
+<span class="fc" id="L427">						field = modelEvaluator.resolveField(name);</span>
+<span class="pc bpc" id="L428" title="1 of 2 branches missed.">						if(field != null){</span>
+<span class="fc" id="L429">							break parser;</span>
+						}
+					}
+
+<span class="nc" id="L433">					throw new InvalidAttributeException(item, PMMLAttributes.ITEM_VALUE, value);</span>
+				} else
+
+				// Transactional data style: one group field, one active field
+<span class="pc bpc" id="L437" title="1 of 2 branches missed.">				if(groupFields.size() == 1){</span>
+
+<span class="pc bpc" id="L439" title="1 of 2 branches missed.">					if(activeFields.size() != 1){</span>
+<span class="nc" id="L440">						throw modelEvaluator.createMiningSchemaException(&quot;Expected 1 active field, got &quot; + activeFields.size() + &quot; active fields&quot;);</span>
+					}
+
+<span class="fc" id="L443">					InputField activeField = activeFields.get(0);</span>
+
+<span class="fc" id="L445">					name = activeField.getFieldName();</span>
+<span class="fc" id="L446">					category = value;</span>
+<span class="fc" id="L447">				} else</span>
+
+				{
+<span class="nc" id="L450">					throw modelEvaluator.createMiningSchemaException(&quot;Expected 0 or 1 group field(s), got &quot; + groupFields.size() + &quot; group fields&quot;);</span>
+				}
+			} else
+
+			{
+<span class="nc bnc" id="L455" title="All 2 branches missed.">				if(groupFields.size() == 1){</span>
+
+<span class="nc bnc" id="L457" title="All 2 branches missed.">					if(category != null){</span>
+<span class="nc" id="L458">						break parser;</span>
+					}
+				} // End if
+
+<span class="nc bnc" id="L462" title="All 2 branches missed.">				if(category == null){</span>
+<span class="nc" id="L463">					throw new MissingAttributeException(item, PMMLAttributes.ITEM_CATEGORY);</span>
+				}
+			}
+
+<span class="fc" id="L467">			ItemValue itemValue = new ItemValue(id, name, category);</span>
+
+<span class="fc" id="L469">			result.add(itemValue);</span>
+<span class="fc" id="L470">		}</span>
+
+<span class="fc" id="L472">		return ImmutableList.copyOf(result);</span>
+	}
+
+	static
+	private class ItemValue {
+
+<span class="fc" id="L478">		private String id = null;</span>
+
+<span class="fc" id="L480">		private FieldName field = null;</span>
+
+<span class="fc" id="L482">		private String category = null;</span>
+
+
+<span class="fc" id="L485">		private ItemValue(String id, FieldName field, String category){</span>
+<span class="fc" id="L486">			setId(id);</span>
+<span class="fc" id="L487">			setField(field);</span>
+<span class="fc" id="L488">			setCategory(category);</span>
+<span class="fc" id="L489">		}</span>
+
+		private String getId(){
+<span class="fc" id="L492">			return this.id;</span>
+		}
+
+		private void setId(String id){
+<span class="fc" id="L496">			this.id = id;</span>
+<span class="fc" id="L497">		}</span>
+
+		private FieldName getField(){
+<span class="fc" id="L500">			return this.field;</span>
+		}
+
+		private void setField(FieldName field){
+<span class="fc" id="L504">			this.field = field;</span>
+<span class="fc" id="L505">		}</span>
+
+		private String getCategory(){
+<span class="fc" id="L508">			return this.category;</span>
+		}
+
+		private void setCategory(String category){
+<span class="fc" id="L512">			this.category = category;</span>
+<span class="fc" id="L513">		}</span>
+	}
+
+<span class="fc" id="L516">	private static final LoadingCache&lt;AssociationModel, BiMap&lt;String, AssociationRule&gt;&gt; entityCache = CacheUtil.buildLoadingCache(new CacheLoader&lt;AssociationModel, BiMap&lt;String, AssociationRule&gt;&gt;(){</span>
+
+		@Override
+		public BiMap&lt;String, AssociationRule&gt; load(AssociationModel associationModel){
+<span class="fc" id="L520">			return EntityUtil.buildBiMap(associationModel.getAssociationRules());</span>
+		}
+	});
+
+<span class="fc" id="L524">	private static final LoadingCache&lt;AssociationModel, Map&lt;String, Item&gt;&gt; itemCache = CacheUtil.buildLoadingCache(new CacheLoader&lt;AssociationModel, Map&lt;String, Item&gt;&gt;(){</span>
+
+		@Override
+		public Map&lt;String, Item&gt; load(AssociationModel associationModel){
+<span class="fc" id="L528">			return IndexableUtil.buildMap(associationModel.getItems());</span>
+		}
+	});
+
+<span class="fc" id="L532">	private static final LoadingCache&lt;AssociationModel, Map&lt;String, Itemset&gt;&gt; itemsetCache = CacheUtil.buildLoadingCache(new CacheLoader&lt;AssociationModel, Map&lt;String, Itemset&gt;&gt;(){</span>
+
+		@Override
+		public Map&lt;String, Itemset&gt; load(AssociationModel associationModel){
+<span class="fc" id="L536">			return IndexableUtil.buildMap(associationModel.getItemsets());</span>
+		}
+	});
+
+<span class="fc" id="L540">	private static final Cache&lt;AssociationModel, List&lt;ItemValue&gt;&gt; itemValueCache = CacheUtil.buildCache();</span>
+
+	// IBM SPSS-style schema
+<span class="fc" id="L543">	private static final FieldValue STRING_TRUE = FieldValueUtil.create(TypeInfos.CATEGORICAL_STRING, &quot;T&quot;);</span>
+<span class="fc" id="L544">	private static final FieldValue STRING_FALSE = FieldValueUtil.create(TypeInfos.CATEGORICAL_STRING, &quot;F&quot;);</span>
+
+<span class="fc" id="L546">	private static final FieldValue BOOLEAN_TRUE = FieldValues.CATEGORICAL_BOOLEAN_TRUE;</span>
+<span class="fc" id="L547">	private static final FieldValue BOOLEAN_FALSE = FieldValues.CATEGORICAL_BOOLEAN_FALSE;</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.0.201801022044</span></div></body></html>

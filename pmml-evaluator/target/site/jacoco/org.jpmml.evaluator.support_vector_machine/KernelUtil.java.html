@@ -1,0 +1,219 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>KernelUtil.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">JPMML evaluator</a> &gt; <a href="index.source.html" class="el_package">org.jpmml.evaluator.support_vector_machine</a> &gt; <span class="el_source">KernelUtil.java</span></div><h1>KernelUtil.java</h1><pre class="source lang-java linenums">/*
+ * Copyright (c) 2019 Villu Ruusmann
+ *
+ * This file is part of JPMML-Evaluator
+ *
+ * JPMML-Evaluator is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Affero General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * JPMML-Evaluator is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Affero General Public License for more details.
+ *
+ * You should have received a copy of the GNU Affero General Public License
+ * along with JPMML-Evaluator.  If not, see &lt;http://www.gnu.org/licenses/&gt;.
+ */
+package org.jpmml.evaluator.support_vector_machine;
+
+import org.dmg.pmml.support_vector_machine.Kernel;
+import org.dmg.pmml.support_vector_machine.LinearKernel;
+import org.dmg.pmml.support_vector_machine.PolynomialKernel;
+import org.dmg.pmml.support_vector_machine.RadialBasisKernel;
+import org.dmg.pmml.support_vector_machine.SigmoidKernel;
+import org.jpmml.evaluator.UnsupportedElementException;
+import org.jpmml.evaluator.Value;
+import org.jpmml.evaluator.ValueFactory;
+
+public class KernelUtil {
+
+	private KernelUtil(){
+	}
+
+	static
+	public &lt;V extends Number&gt; Value&lt;V&gt; evaluate(Kernel kernel, ValueFactory&lt;V&gt; valueFactory, Object input, Object vector){
+
+<span class="pc bpc" id="L38" title="1 of 2 branches missed.">		if(kernel instanceof LinearKernel){</span>
+<span class="nc" id="L39">			return evaluateLinearKernel((LinearKernel)kernel, valueFactory, input, vector);</span>
+		} else
+
+<span class="pc bpc" id="L42" title="1 of 2 branches missed.">		if(kernel instanceof PolynomialKernel){</span>
+<span class="nc" id="L43">			return evaluatePolynomialKernel((PolynomialKernel)kernel, valueFactory, input, vector);</span>
+		} else
+
+<span class="pc bpc" id="L46" title="1 of 2 branches missed.">		if(kernel instanceof RadialBasisKernel){</span>
+<span class="fc" id="L47">			return evaluateRadialBasisKernel((RadialBasisKernel)kernel, valueFactory, input, vector);</span>
+		} else
+
+<span class="nc bnc" id="L50" title="All 2 branches missed.">		if(kernel instanceof SigmoidKernel){</span>
+<span class="nc" id="L51">			return evaluateSigmoidKernel((SigmoidKernel)kernel, valueFactory, input, vector);</span>
+		}
+
+<span class="nc" id="L54">		throw new UnsupportedElementException(kernel);</span>
+	}
+
+	static
+	public &lt;V extends Number&gt; Value&lt;V&gt; evaluateLinearKernel(LinearKernel linearKernel, ValueFactory&lt;V&gt; valueFactory, Object input, Object vector){
+<span class="nc" id="L59">		Value&lt;V&gt; result = valueFactory.newValue(dotProduct(input, vector));</span>
+
+<span class="nc" id="L61">		return result;</span>
+	}
+
+	static
+	public &lt;V extends Number&gt; Value&lt;V&gt; evaluatePolynomialKernel(PolynomialKernel polynomialKernel, ValueFactory&lt;V&gt; valueFactory, Object input, Object vector){
+<span class="nc" id="L66">		Value&lt;V&gt; result = valueFactory.newValue(dotProduct(input, vector));</span>
+
+<span class="nc" id="L68">		Double gamma = polynomialKernel.getGamma();</span>
+<span class="nc bnc" id="L69" title="All 2 branches missed.">		if(gamma.doubleValue() != 1d){</span>
+<span class="nc" id="L70">			result.multiply(gamma);</span>
+		}
+
+<span class="nc" id="L73">		Double coef0 = polynomialKernel.getCoef0();</span>
+<span class="nc bnc" id="L74" title="All 2 branches missed.">		if(coef0.doubleValue() != 1d){</span>
+<span class="nc" id="L75">			result.add(coef0);</span>
+		}
+
+<span class="nc" id="L78">		Double degree = polynomialKernel.getDegree();</span>
+<span class="nc bnc" id="L79" title="All 2 branches missed.">		if(degree.doubleValue() != 1d){</span>
+<span class="nc" id="L80">			result.power(degree);</span>
+		}
+
+<span class="nc" id="L83">		return result;</span>
+	}
+
+	static
+	public &lt;V extends Number&gt; Value&lt;V&gt; evaluateRadialBasisKernel(RadialBasisKernel radialBasisKernel, ValueFactory&lt;V&gt; valueFactory, Object input, Object vector){
+<span class="fc" id="L88">		Value&lt;V&gt; result = valueFactory.newValue(negativeSquaredDistance(input, vector));</span>
+
+<span class="fc" id="L90">		Double gamma = radialBasisKernel.getGamma();</span>
+<span class="pc bpc" id="L91" title="1 of 2 branches missed.">		if(gamma != 1d){</span>
+<span class="nc" id="L92">			result.multiply(gamma);</span>
+		}
+
+<span class="fc" id="L95">		result.exp();</span>
+
+<span class="fc" id="L97">		return result;</span>
+	}
+
+	static
+	public &lt;V extends Number&gt; Value&lt;V&gt; evaluateSigmoidKernel(SigmoidKernel sigmoidKernel, ValueFactory&lt;V&gt; valueFactory, Object input, Object vector){
+<span class="nc" id="L102">		Value&lt;V&gt; result = valueFactory.newValue(dotProduct(input, vector));</span>
+
+<span class="nc" id="L104">		Double gamma = sigmoidKernel.getGamma();</span>
+<span class="nc bnc" id="L105" title="All 2 branches missed.">		if(gamma != 1d){</span>
+<span class="nc" id="L106">			result.multiply(gamma);</span>
+		}
+
+<span class="nc" id="L109">		Double coef0 = sigmoidKernel.getCoef0();</span>
+<span class="nc bnc" id="L110" title="All 2 branches missed.">		if(coef0 != 1d){</span>
+<span class="nc" id="L111">			result.add(coef0);</span>
+		}
+
+<span class="nc" id="L114">		result.tanh();</span>
+
+<span class="nc" id="L116">		return result;</span>
+	}
+
+	static
+	private Number dotProduct(Object left, Object right){
+
+<span class="nc bnc" id="L122" title="All 4 branches missed.">		if((left instanceof float[]) &amp;&amp; (right instanceof float[])){</span>
+<span class="nc" id="L123">			return dotProduct((float[])left, (float[])right);</span>
+		} else
+
+<span class="nc bnc" id="L126" title="All 4 branches missed.">		if((left instanceof double[]) &amp;&amp; (right instanceof double[])){</span>
+<span class="nc" id="L127">			return dotProduct((double[])left, (double[])right);</span>
+		} else
+
+		{
+<span class="nc" id="L131">			throw new IllegalArgumentException();</span>
+		}
+	}
+
+	static
+	private float dotProduct(float[] left, float[] right){
+
+<span class="nc bnc" id="L138" title="All 2 branches missed.">		if(left.length != right.length){</span>
+<span class="nc" id="L139">			throw new IllegalArgumentException();</span>
+		}
+
+<span class="nc" id="L142">		float sum = 0f;</span>
+
+<span class="nc bnc" id="L144" title="All 2 branches missed.">		for(int i = 0, max = left.length; i &lt; max; i++){</span>
+<span class="nc" id="L145">			sum += (left[i] * right[i]);</span>
+		}
+
+<span class="nc" id="L148">		return sum;</span>
+	}
+
+	static
+	private double dotProduct(double[] left, double[] right){
+
+<span class="nc bnc" id="L154" title="All 2 branches missed.">		if(left.length != right.length){</span>
+<span class="nc" id="L155">			throw new IllegalArgumentException();</span>
+		}
+
+<span class="nc" id="L158">		double sum = 0d;</span>
+
+<span class="nc bnc" id="L160" title="All 2 branches missed.">		for(int i = 0, max = left.length; i &lt; max; i++){</span>
+<span class="nc" id="L161">			sum += (left[i] * right[i]);</span>
+		}
+
+<span class="nc" id="L164">		return sum;</span>
+	}
+
+	static
+	private Number negativeSquaredDistance(Object left, Object right){
+
+<span class="pc bpc" id="L170" title="3 of 4 branches missed.">		if((left instanceof float[]) &amp;&amp; (right instanceof float[])){</span>
+<span class="nc" id="L171">			return -squaredDistance((float[])left, (float[])right);</span>
+		} else
+
+<span class="pc bpc" id="L174" title="2 of 4 branches missed.">		if((left instanceof double[]) &amp;&amp; (right instanceof double[])){</span>
+<span class="fc" id="L175">			return -squaredDistance((double[])left, (double[])right);</span>
+		} else
+
+		{
+<span class="nc" id="L179">			throw new IllegalArgumentException();</span>
+		}
+	}
+
+	static
+	private float squaredDistance(float[] left, float[] right){
+
+<span class="nc bnc" id="L186" title="All 2 branches missed.">		if(left.length != right.length){</span>
+<span class="nc" id="L187">			throw new IllegalArgumentException();</span>
+		}
+
+<span class="nc" id="L190">		float sum = 0f;</span>
+
+<span class="nc bnc" id="L192" title="All 2 branches missed.">		for(int i = 0, max = left.length; i &lt; max; i++){</span>
+<span class="nc" id="L193">			float diff = (left[i] - right[i]);</span>
+
+<span class="nc" id="L195">			sum += (diff * diff);</span>
+		}
+
+<span class="nc" id="L198">		return sum;</span>
+	}
+
+	static
+	private double squaredDistance(double[] left, double[] right){
+
+<span class="pc bpc" id="L204" title="1 of 2 branches missed.">		if(left.length != right.length){</span>
+<span class="nc" id="L205">			throw new IllegalArgumentException();</span>
+		}
+
+<span class="fc" id="L208">		double sum = 0d;</span>
+
+<span class="fc bfc" id="L210" title="All 2 branches covered.">		for(int i = 0, max = left.length; i &lt; max; i++){</span>
+<span class="fc" id="L211">			double diff = (left[i] - right[i]);</span>
+
+<span class="fc" id="L213">			sum += (diff * diff);</span>
+		}
+
+<span class="fc" id="L216">		return sum;</span>
+	}
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.2.201808211720</span></div></body></html>

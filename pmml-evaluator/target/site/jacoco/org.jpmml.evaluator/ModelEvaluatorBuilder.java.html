@@ -1,0 +1,232 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>ModelEvaluatorBuilder.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">JPMML evaluator</a> &gt; <a href="index.source.html" class="el_package">org.jpmml.evaluator</a> &gt; <span class="el_source">ModelEvaluatorBuilder.java</span></div><h1>ModelEvaluatorBuilder.java</h1><pre class="source lang-java linenums">/*
+ * Copyright (c) 2018 Villu Ruusmann
+ *
+ * This file is part of JPMML-Evaluator
+ *
+ * JPMML-Evaluator is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Affero General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * JPMML-Evaluator is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Affero General Public License for more details.
+ *
+ * You should have received a copy of the GNU Affero General Public License
+ * along with JPMML-Evaluator.  If not, see &lt;http://www.gnu.org/licenses/&gt;.
+ */
+package org.jpmml.evaluator;
+
+import java.io.Serializable;
+import java.util.Collections;
+import java.util.List;
+import java.util.Objects;
+
+import org.dmg.pmml.MiningSchema;
+import org.dmg.pmml.Model;
+import org.dmg.pmml.PMML;
+
+public class ModelEvaluatorBuilder implements EvaluatorBuilder, Serializable {
+
+<span class="pc" id="L32">	private PMML pmml = null;</span>
+
+<span class="pc" id="L34">	private Model model = null;</span>
+
+<span class="pc" id="L36">	private ConfigurationBuilder configurationBuilder = new ConfigurationBuilder();</span>
+
+<span class="pc" id="L38">	private InputMapper inputMapper = null;</span>
+
+<span class="pc" id="L40">	private ResultMapper resultMapper = null;</span>
+
+
+<span class="fc" id="L43">	protected ModelEvaluatorBuilder(){</span>
+<span class="fc" id="L44">	}</span>
+
+	/**
+	 * &lt;p&gt;
+	 * Selects the first scorable model.
+	 * &lt;/p&gt;
+	 *
+	 * @throws MissingElementException If the PMML does not contain any scorable models.
+	 */
+	public ModelEvaluatorBuilder(PMML pmml){
+<span class="nc" id="L54">		this(pmml, (String)null);</span>
+<span class="nc" id="L55">	}</span>
+
+	/**
+	 * &lt;p&gt;
+	 * Selects the named model.
+	 * &lt;/p&gt;
+	 *
+	 * @throws MissingElementException If the PMML does not contain a model with the specified model name.
+	 *
+	 * @see Model#getModelName()
+	 */
+<span class="nc" id="L66">	public ModelEvaluatorBuilder(PMML pmml, String modelName){</span>
+<span class="nc" id="L67">		setPMML(Objects.requireNonNull(pmml));</span>
+<span class="nc" id="L68">		setModel(PMMLUtil.findModel(pmml, modelName));</span>
+<span class="nc" id="L69">	}</span>
+
+<span class="fc" id="L71">	public ModelEvaluatorBuilder(PMML pmml, Model model){</span>
+<span class="fc" id="L72">		setPMML(Objects.requireNonNull(pmml));</span>
+<span class="fc" id="L73">		setModel(Objects.requireNonNull(model));</span>
+<span class="fc" id="L74">	}</span>
+
+	@Override
+	public ModelEvaluatorBuilder clone(){
+		ModelEvaluatorBuilder modelEvaluatorBuilder;
+
+		try {
+<span class="fc" id="L81">			modelEvaluatorBuilder = (ModelEvaluatorBuilder)super.clone();</span>
+<span class="nc" id="L82">		} catch(CloneNotSupportedException cnse){</span>
+<span class="nc" id="L83">			throw new InternalError(cnse);</span>
+<span class="fc" id="L84">		}</span>
+
+<span class="fc" id="L86">		modelEvaluatorBuilder.configurationBuilder = modelEvaluatorBuilder.configurationBuilder.clone();</span>
+
+<span class="fc" id="L88">		return modelEvaluatorBuilder;</span>
+	}
+
+	@Override
+	public ModelEvaluator&lt;?&gt; build(){
+<span class="fc" id="L93">		PMML pmml = getPMML();</span>
+<span class="fc" id="L94">		Model model = getModel();</span>
+
+<span class="pc bpc" id="L96" title="2 of 4 branches missed.">		if((pmml == null) || (model == null)){</span>
+<span class="nc" id="L97">			throw new IllegalStateException();</span>
+		}
+
+<span class="fc" id="L100">		ConfigurationBuilder configurationBuilder = getConfigurationBuilder();</span>
+
+<span class="fc" id="L102">		Configuration configuration = configurationBuilder.build();</span>
+
+<span class="fc" id="L104">		ModelEvaluatorFactory modelEvaluatorFactory = configuration.getModelEvaluatorFactory();</span>
+
+<span class="fc" id="L106">		ModelEvaluator&lt;?&gt; modelEvaluator = modelEvaluatorFactory.newModelEvaluator(pmml, model);</span>
+<span class="fc" id="L107">		modelEvaluator.configure(configuration);</span>
+
+<span class="fc" id="L109">		InputMapper inputMapper = getInputMapper();</span>
+<span class="fc" id="L110">		ResultMapper resultMapper = getResultMapper();</span>
+
+<span class="fc" id="L112">		modelEvaluator.setInputMapper(inputMapper);</span>
+<span class="fc" id="L113">		modelEvaluator.setResultMapper(resultMapper);</span>
+
+<span class="fc" id="L115">		checkSchema(modelEvaluator);</span>
+
+<span class="fc" id="L117">		return modelEvaluator;</span>
+	}
+
+	protected void checkSchema(ModelEvaluator&lt;?&gt; modelEvaluator){
+<span class="nc" id="L121">		Model model = modelEvaluator.getModel();</span>
+
+<span class="nc" id="L123">		MiningSchema miningSchema = model.getMiningSchema();</span>
+
+<span class="nc" id="L125">		List&lt;InputField&gt; inputFields = modelEvaluator.getInputFields();</span>
+<span class="nc" id="L126">		List&lt;InputField&gt; groupFields = Collections.emptyList();</span>
+
+<span class="nc bnc" id="L128" title="All 2 branches missed.">		if(modelEvaluator instanceof HasGroupFields){</span>
+<span class="nc" id="L129">			HasGroupFields hasGroupFields = (HasGroupFields)modelEvaluator;</span>
+
+<span class="nc" id="L131">			groupFields = hasGroupFields.getGroupFields();</span>
+		} // End if
+
+<span class="nc bnc" id="L134" title="All 2 branches missed.">		if((inputFields.size() + groupFields.size()) &gt; 1000){</span>
+<span class="nc" id="L135">			throw new InvalidElementException(&quot;Model has too many input fields&quot;, miningSchema);</span>
+		}
+
+<span class="nc" id="L138">		List&lt;TargetField&gt; targetFields = modelEvaluator.getTargetFields();</span>
+<span class="nc" id="L139">		List&lt;OutputField&gt; outputFields = modelEvaluator.getOutputFields();</span>
+
+<span class="nc bnc" id="L141" title="All 2 branches missed.">		if((targetFields.size() + outputFields.size()) &lt; 1){</span>
+<span class="nc" id="L142">			throw new InvalidElementException(&quot;Model does not have any target or output fields&quot;, miningSchema);</span>
+		}
+<span class="nc" id="L144">	}</span>
+
+	public PMML getPMML(){
+<span class="fc" id="L147">		return this.pmml;</span>
+	}
+
+	protected ModelEvaluatorBuilder setPMML(PMML pmml){
+<span class="fc" id="L151">		this.pmml = pmml;</span>
+
+<span class="fc" id="L153">		return this;</span>
+	}
+
+	public Model getModel(){
+<span class="fc" id="L157">		return this.model;</span>
+	}
+
+	protected ModelEvaluatorBuilder setModel(Model model){
+<span class="fc" id="L161">		this.model = model;</span>
+
+<span class="fc" id="L163">		return this;</span>
+	}
+
+	public ConfigurationBuilder getConfigurationBuilder(){
+<span class="fc" id="L167">		return this.configurationBuilder;</span>
+	}
+
+	public ModelEvaluatorFactory getModelEvaluatorFactory(){
+<span class="fc" id="L171">		ConfigurationBuilder configurationBuilder = getConfigurationBuilder();</span>
+
+<span class="fc" id="L173">		return configurationBuilder.getModelEvaluatorFactory();</span>
+	}
+
+	public ModelEvaluatorBuilder setModelEvaluatorFactory(ModelEvaluatorFactory modelEvaluatorFactory){
+<span class="fc" id="L177">		ConfigurationBuilder configurationBuilder = getConfigurationBuilder();</span>
+
+<span class="fc" id="L179">		configurationBuilder.setModelEvaluatorFactory(modelEvaluatorFactory);</span>
+
+<span class="fc" id="L181">		return this;</span>
+	}
+
+	public ValueFactoryFactory getValueFactoryFactory(){
+<span class="fc" id="L185">		ConfigurationBuilder configurationBuilder = getConfigurationBuilder();</span>
+
+<span class="fc" id="L187">		return configurationBuilder.getValueFactoryFactory();</span>
+	}
+
+	public ModelEvaluatorBuilder setValueFactoryFactory(ValueFactoryFactory valueFactoryFactory){
+<span class="fc" id="L191">		ConfigurationBuilder configurationBuilder = getConfigurationBuilder();</span>
+
+<span class="fc" id="L193">		configurationBuilder.setValueFactoryFactory(valueFactoryFactory);</span>
+
+<span class="fc" id="L195">		return this;</span>
+	}
+
+	public OutputFilter getOutputFilter(){
+<span class="nc" id="L199">		ConfigurationBuilder configurationBuilder = getConfigurationBuilder();</span>
+
+<span class="nc" id="L201">		return configurationBuilder.getOutputFilter();</span>
+	}
+
+	public ModelEvaluatorBuilder setOutputFilter(OutputFilter outputFilter){
+<span class="fc" id="L205">		ConfigurationBuilder configurationBuilder = getConfigurationBuilder();</span>
+
+<span class="fc" id="L207">		configurationBuilder.setOutputFilter(outputFilter);</span>
+
+<span class="fc" id="L209">		return this;</span>
+	}
+
+	public InputMapper getInputMapper(){
+<span class="fc" id="L213">		return this.inputMapper;</span>
+	}
+
+	public ModelEvaluatorBuilder setInputMapper(InputMapper inputMapper){
+<span class="nc" id="L217">		this.inputMapper = inputMapper;</span>
+
+<span class="nc" id="L219">		return this;</span>
+	}
+
+	public ResultMapper getResultMapper(){
+<span class="fc" id="L223">		return this.resultMapper;</span>
+	}
+
+	public ModelEvaluatorBuilder setResultMapper(ResultMapper resultMapper){
+<span class="nc" id="L227">		this.resultMapper = resultMapper;</span>
+
+<span class="nc" id="L229">		return this;</span>
+	}
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.2.201808211720</span></div></body></html>
